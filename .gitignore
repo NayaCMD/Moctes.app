@@ -1,0 +1,78 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.sample
+frontend/.env
+frontend/.env.*
+backend/.env
+backend/.env.*
+
+# Build and output directories
+dist/
+build/
+out/
+.next/
+.nuxt/
+.output/
+.parcel-cache/
+.cache/
+.svelte-kit/
+.vite/
+frontend/dist/
+frontend/build/
+backend/dist/
+backend/build/
+
+# Test and coverage artifacts
+coverage/
+.nyc_output/
+*.lcov
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Package manager caches and stores
+.npm/
+.eslintcache
+.stylelintcache
+.pnpm-store/
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# Temporary and runtime files
+pids/
+*.pid
+*.seed
+*.pid.lock
+*.tsbuildinfo
+
+# Editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Prisma generated client
+backend/src/generated/prisma/
+**/generated/prisma/
+
+# Docker
+*.pid
