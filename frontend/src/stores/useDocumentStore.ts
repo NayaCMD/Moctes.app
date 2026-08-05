@@ -16,6 +16,7 @@ import {
   timestamp,
 } from "../utils/document.utils";
 import { placeElementForInsertion } from "../utils/insertion.utils";
+import { syncNotebookSectionsWithPages } from "../utils/notebookMigration.utils";
 import { normalizePostItContent } from "../utils/postIt.utils";
 import { normalizeShapeAppearance } from "../utils/shape.utils";
 
@@ -77,7 +78,7 @@ type PersistedDocumentState = Pick<
 const firstDocument = initialDocuments[0];
 
 const fallbackState: PersistedDocumentState = {
-  documents: initialDocuments,
+  documents: initialDocuments.map((document) => syncDocument(document)),
   activeDocumentId: firstDocument.id,
   activePageId: firstDocument.activePageId,
   activeDividerId: firstDocument.dividers[0]?.id ?? null,
@@ -132,7 +133,7 @@ export const useDocumentStore = create<DocumentStoreState>()(
         set((state) => ({
           documents: state.documents.map((document) =>
             document.id === documentId
-              ? { ...document, ...updates, id: document.id, updatedAt: timestamp() }
+              ? syncDocument({ ...document, ...updates, id: document.id, updatedAt: timestamp() })
               : document,
           ),
         })),
@@ -184,12 +185,12 @@ export const useDocumentStore = create<DocumentStoreState>()(
 
             createdPageId = page.id;
 
-            return {
+            return syncDocument({
               ...document,
               pages: normalizePageOrder([...document.pages, page]),
               activePageId: page.id,
               updatedAt: timestamp(),
-            };
+            });
           }),
           activePageId: createdPageId ?? state.activePageId,
           selectedElementId: null,
@@ -222,12 +223,12 @@ export const useDocumentStore = create<DocumentStoreState>()(
               nextActivePageId = pages[0].id;
             }
 
-            return {
+            return syncDocument({
               ...document,
               pages,
               activePageId: document.activePageId === pageId ? pages[0].id : document.activePageId,
               updatedAt: timestamp(),
-            };
+            });
           });
 
           return { documents, activePageId: nextActivePageId, selectedElementId: null };
@@ -247,12 +248,12 @@ export const useDocumentStore = create<DocumentStoreState>()(
             });
             duplicatedPageId = duplicatedPage.id;
 
-            return {
+            return syncDocument({
               ...document,
               pages: normalizePageOrder([...document.pages, duplicatedPage]),
               activePageId: duplicatedPage.id,
               updatedAt: timestamp(),
-            };
+            });
           }),
           activePageId: duplicatedPageId ?? state.activePageId,
           selectedElementId: null,
@@ -275,11 +276,11 @@ export const useDocumentStore = create<DocumentStoreState>()(
             });
             dividerId = divider.id;
 
-            return {
+            return syncDocument({
               ...document,
               dividers: [...document.dividers, divider],
               updatedAt: timestamp(),
-            };
+            });
           }),
           activeDividerId: dividerId ?? state.activeDividerId,
         }));
@@ -287,24 +288,28 @@ export const useDocumentStore = create<DocumentStoreState>()(
       },
       updateDivider: (dividerId, updates) =>
         set((state) => ({
-          documents: state.documents.map((document) => ({
-            ...document,
-            dividers: document.dividers.map((divider) =>
-              divider.id === dividerId
-                ? { ...divider, ...updates, id: divider.id, documentId: divider.documentId }
-                : divider,
-            ),
-          })),
+          documents: state.documents.map((document) =>
+            syncDocument({
+              ...document,
+              dividers: document.dividers.map((divider) =>
+                divider.id === dividerId
+                  ? { ...divider, ...updates, id: divider.id, documentId: divider.documentId }
+                  : divider,
+              ),
+            }),
+          ),
         })),
       deleteDivider: (dividerId) =>
         set((state) => ({
-          documents: state.documents.map((document) => ({
-            ...document,
-            dividers: document.dividers.filter((divider) => divider.id !== dividerId),
-            pages: document.pages.map((page) =>
-              page.dividerId === dividerId ? { ...page, dividerId: undefined } : page,
-            ),
-          })),
+          documents: state.documents.map((document) =>
+            syncDocument({
+              ...document,
+              dividers: document.dividers.filter((divider) => divider.id !== dividerId),
+              pages: document.pages.map((page) =>
+                page.dividerId === dividerId ? { ...page, dividerId: undefined } : page,
+              ),
+            }),
+          ),
           activeDividerId: state.activeDividerId === dividerId ? null : state.activeDividerId,
         })),
       addElement: (pageId, element) =>
@@ -359,7 +364,7 @@ export const useDocumentStore = create<DocumentStoreState>()(
               return document;
             }
 
-            return {
+            return syncDocument({
               ...document,
               pages: pagesWithoutElement.map((page) =>
                 page.id === targetPageId
@@ -372,7 +377,7 @@ export const useDocumentStore = create<DocumentStoreState>()(
               ),
               activePageId: targetPageId,
               updatedAt: timestamp(),
-            };
+            });
           });
 
           if (!movingElement) {
@@ -419,13 +424,15 @@ export const useDocumentStore = create<DocumentStoreState>()(
           }
 
           return {
-            documents: state.documents.map((document) => ({
-              ...document,
-              pages: document.pages.map((page) => ({
-                ...page,
-                elements: normalizeZIndexes(page.elements.filter((item) => item.id !== elementId)),
-              })),
-            })),
+            documents: state.documents.map((document) =>
+              syncDocument({
+                ...document,
+                pages: document.pages.map((page) => ({
+                  ...page,
+                  elements: normalizeZIndexes(page.elements.filter((item) => item.id !== elementId)),
+                })),
+              }),
+            ),
             selectedElementId: state.selectedElementId === elementId ? null : state.selectedElementId,
           };
         }),
@@ -500,7 +507,7 @@ export const useDocumentStore = create<DocumentStoreState>()(
             }
 
             const orderById = new Map(pageIds.map((pageId, index) => [pageId, index + 1]));
-            return {
+            return syncDocument({
               ...document,
               pages: normalizePageOrder(
                 document.pages.map((page) => ({
@@ -509,7 +516,7 @@ export const useDocumentStore = create<DocumentStoreState>()(
                 })),
               ),
               updatedAt: timestamp(),
-            };
+            });
           }),
         })),
       movePageToDivider: (pageId, dividerId) =>
@@ -578,7 +585,7 @@ function updateDocuments(
   update: (document: MoctesDocument) => MoctesDocument,
   extras: Partial<DocumentStoreState> = {},
 ): Partial<DocumentStoreState> {
-  return { documents: state.documents.map(update), ...extras };
+  return { documents: state.documents.map((document) => syncDocument(update(document))), ...extras };
 }
 
 function updatePageInState(
@@ -589,9 +596,11 @@ function updatePageInState(
 ): Partial<DocumentStoreState> {
   return {
     documents: state.documents.map((document) => ({
-      ...document,
-      pages: document.pages.map((page) => (page.id === pageId ? update(page) : page)),
-      updatedAt: document.pages.some((page) => page.id === pageId) ? timestamp() : document.updatedAt,
+      ...syncDocument({
+        ...document,
+        pages: document.pages.map((page) => (page.id === pageId ? update(page) : page)),
+        updatedAt: document.pages.some((page) => page.id === pageId) ? timestamp() : document.updatedAt,
+      }),
     })),
     ...extras,
   };
@@ -618,14 +627,16 @@ function updateElementPageInState(
 ): Partial<DocumentStoreState> {
   return {
     documents: state.documents.map((document) => ({
-      ...document,
-      pages: document.pages.map((page) => {
-        const element = page.elements.find((item) => item.id === elementId);
-        return element ? update(page, element) : page;
+      ...syncDocument({
+        ...document,
+        pages: document.pages.map((page) => {
+          const element = page.elements.find((item) => item.id === elementId);
+          return element ? update(page, element) : page;
+        }),
+        updatedAt: document.pages.some((page) => page.elements.some((element) => element.id === elementId))
+          ? timestamp()
+          : document.updatedAt,
       }),
-      updatedAt: document.pages.some((page) => page.elements.some((element) => element.id === elementId))
-        ? timestamp()
-        : document.updatedAt,
     })),
     ...extras,
   };
@@ -698,6 +709,10 @@ function getDefaultPatternSize(paperType: Page["paperType"]): number {
   }
 }
 
+function syncDocument(document: MoctesDocument): MoctesDocument {
+  return document.type === "notebook" ? syncNotebookSectionsWithPages(document) : document;
+}
+
 function sanitizePersistedState(value: unknown): PersistedDocumentState {
   if (!isDocumentStoreSnapshot(value)) {
     return fallbackState;
@@ -757,12 +772,12 @@ function sanitizeDocuments(documents: MoctesDocument[]): MoctesDocument[] {
       );
       const activePageId = pages.find((page) => page.id === document.activePageId)?.id ?? pages[0].id;
 
-      return {
+      return syncDocument({
         ...document,
         pages,
         dividers: Array.isArray(document.dividers) ? document.dividers : [],
         activePageId,
-      };
+      });
     });
 
   return sanitized.length > 0 ? sanitized : initialDocuments;

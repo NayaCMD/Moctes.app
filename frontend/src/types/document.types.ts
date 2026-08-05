@@ -1,4 +1,9 @@
 import type { AssetCategory, AssetSource, AssetType } from "./asset.types";
+import type {
+  NotebookBinding,
+  NotebookCover,
+  NotebookSection,
+} from "./notebook.types";
 import type { Page } from "./page.types";
 
 export type { AssetCategory } from "./asset.types";
@@ -22,9 +27,14 @@ export interface Divider {
 }
 
 export interface MoctesDocument {
+  schemaVersion?: 1 | 2;
   id: string;
   type: DocumentType;
   title: string;
+  cover?: NotebookCover;
+  binding?: NotebookBinding;
+  sections?: NotebookSection[];
+  activeSurfaceId?: string;
   coverColor: string;
   coverBorderColor?: string;
   spineColor?: string;

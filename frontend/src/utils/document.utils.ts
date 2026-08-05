@@ -2,6 +2,7 @@ import type { Divider, DocumentType, MoctesDocument } from "../types/document.ty
 import type { PageElement } from "../types/element.types";
 import type { Page } from "../types/page.types";
 import type { PaperType } from "../types/theme.types";
+import { migrateDocumentToSchemaV2 } from "./notebookMigration.utils";
 
 export function createId(prefix: string): string {
   return `${prefix}-${crypto.randomUUID()}`;
@@ -72,7 +73,7 @@ export function createEmptyDocument(type: DocumentType): MoctesDocument {
     title: "Nova página",
   });
 
-  return {
+  const document: MoctesDocument = {
     id: documentId,
     type,
     title:
@@ -94,6 +95,8 @@ export function createEmptyDocument(type: DocumentType): MoctesDocument {
     createdAt,
     updatedAt: createdAt,
   };
+
+  return type === "notebook" ? migrateDocumentToSchemaV2(document) : document;
 }
 
 export function clonePage(page: Page, overrides: Partial<Page> = {}): Page {
