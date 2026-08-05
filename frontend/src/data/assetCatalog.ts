@@ -1,14 +1,13 @@
-import cadernoCoresImage from "../assets/moctes/images/caderno-cores.jpg";
-import notepadReference from "../assets/moctes/images/notepad-reference.jpg";
-import dottedNote from "../assets/moctes/post-its/dotted-note.png";
-import gridNote from "../assets/moctes/post-its/grid-note.png";
-import linedPaper from "../assets/moctes/post-its/lined-paper.png";
-import paperNote from "../assets/moctes/post-its/paper-note.png";
-import stationerySheet from "../assets/moctes/stickers/stationery-sheet.jpg";
-import stickerSheet from "../assets/moctes/stickers/sticker-sheet.png";
-import tapeBlue from "../assets/moctes/tapes/tape-blue.png";
-import tapeGreen from "../assets/moctes/tapes/tape-green.png";
-import tapeOrange from "../assets/moctes/tapes/tape-orange.png";
+import moctesLogo from "../assets/moctes-logo.svg";
+import circleDashed from "../assets/moctes/post-its/circle-dashed.svg";
+import circleDots from "../assets/moctes/post-its/circle-dots.svg";
+import circleSquares from "../assets/moctes/post-its/circle-squares.svg";
+import flag from "../assets/moctes/post-its/flag.svg";
+import paperBlank from "../assets/moctes/post-its/paper-blank.svg";
+import paperFrame from "../assets/moctes/post-its/paper-frame.svg";
+import paperLines from "../assets/moctes/post-its/paper-lines.svg";
+import tapeFlower from "../assets/moctes/tapes/tape-Flower.png";
+import tapeForm from "../assets/moctes/tapes/tape-form.png";
 import type { SidebarAsset } from "../types/document.types";
 
 export const assetCatalog = {
@@ -16,67 +15,67 @@ export const assetCatalog = {
     id: "sticker-sheet",
     category: "stickers",
     label: "Cartela Moctes",
-    src: stickerSheet,
+    src: flag,
   },
   stationerySheet: {
     id: "stationery-sheet",
     category: "stickers",
     label: "Papelaria azul",
-    src: stationerySheet,
+    src: circleDashed,
   },
   notepadReference: {
     id: "notepad-reference",
     category: "images",
     label: "Bloco de notas",
-    src: notepadReference,
+    src: paperFrame,
   },
   cadernoCores: {
     id: "caderno-cores",
     category: "images",
     label: "Caderno colorido",
-    src: cadernoCoresImage,
+    src: moctesLogo,
   },
   paperNote: {
     id: "paper-note",
     category: "post-its",
     label: "Folha clara",
-    src: paperNote,
+    src: paperBlank,
   },
   linedPaper: {
     id: "lined-paper",
     category: "post-its",
     label: "Folha pautada",
-    src: linedPaper,
+    src: paperLines,
   },
   dottedNote: {
     id: "dotted-note",
     category: "post-its",
     label: "Folha pontilhada",
-    src: dottedNote,
+    src: circleDots,
   },
   gridNote: {
     id: "grid-note",
     category: "post-its",
     label: "Folha quadriculada",
-    src: gridNote,
+    src: circleSquares,
   },
   tapeBlue: {
     id: "tape-blue",
     category: "tapes",
     label: "Tape azul",
-    src: tapeBlue,
+    src: tapeForm,
   },
   tapeGreen: {
     id: "tape-green",
     category: "tapes",
     label: "Tape verde",
-    src: tapeGreen,
+    src: tapeFlower,
   },
   tapeOrange: {
     id: "tape-orange",
     category: "tapes",
     label: "Tape laranja",
-    src: tapeOrange,
+    src: tapeForm,
   },
 } satisfies Record<string, SidebarAsset>;
 
