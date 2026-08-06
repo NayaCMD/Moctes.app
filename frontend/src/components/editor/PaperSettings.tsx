@@ -4,6 +4,7 @@ import { useDocumentStore } from "../../stores/useDocumentStore";
 import { useEditorStore } from "../../stores/useEditorStore";
 import type { Page } from "../../types/page.types";
 import type { PaperType } from "../../types/theme.types";
+import { getEditableActivePage } from "../../utils/document.utils";
 
 const patterns: Array<{
   value: PaperType;
@@ -50,10 +51,6 @@ export function PaperSettings() {
     (state) => state.documents,
   );
 
-  const activePageId = useDocumentStore(
-    (state) => state.activePageId,
-  );
-
   const activeDocumentId = useDocumentStore(
     (state) => state.activeDocumentId,
   );
@@ -74,9 +71,9 @@ export function PaperSettings() {
     (document) => document.id === activeDocumentId,
   );
 
-  const activePage = activeDocument?.pages.find(
-    (page) => page.id === activePageId,
-  );
+  const activePage = activeDocument
+    ? getEditableActivePage(activeDocument)
+    : undefined;
 
   const displayedPaperType =
     activePage?.paperType ?? paperType;

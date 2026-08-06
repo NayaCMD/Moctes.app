@@ -3,6 +3,7 @@ import type { PageElement } from "../types/element.types";
 import type { Page } from "../types/page.types";
 import type { PaperType } from "../types/theme.types";
 import { migrateDocumentToSchemaV2 } from "./notebookMigration.utils";
+import { getSurfaceById } from "./notebookSurfaces.utils";
 
 export function createId(prefix: string): string {
   return `${prefix}-${crypto.randomUUID()}`;
@@ -18,6 +19,37 @@ export function getOrderedPages(document: MoctesDocument): Page[] {
 
 export function getActivePage(document: MoctesDocument): Page | undefined {
   return document.pages.find((page) => page.id === document.activePageId);
+}
+
+export function isNotebookPageSurfaceActive(document: MoctesDocument): boolean {
+  if (document.type !== "notebook") {
+    return true;
+  }
+
+  const activeSurface = document.activeSurfaceId
+    ? getSurfaceById(document, document.activeSurfaceId)
+    : undefined;
+
+  return Boolean(
+    activeSurface?.kind === "page" &&
+    document.pages.some((page) => page.id === activeSurface.id),
+  );
+}
+
+export function getEditableActivePage(document: MoctesDocument): Page | undefined {
+  if (document.type !== "notebook") {
+    return getActivePage(document);
+  }
+
+  const activeSurface = document.activeSurfaceId
+    ? getSurfaceById(document, document.activeSurfaceId)
+    : undefined;
+
+  if (activeSurface?.kind !== "page") {
+    return undefined;
+  }
+
+  return document.pages.find((page) => page.id === activeSurface.id);
 }
 
 export function createEmptyPage(options: {

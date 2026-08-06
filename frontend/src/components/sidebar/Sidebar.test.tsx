@@ -63,6 +63,22 @@ describe("Sidebar", () => {
     expect(screen.getByText("Asset adicionado a pagina.")).toBeInTheDocument();
   });
 
+  it("nao adiciona asset quando a divisoria do caderno esta aberta", async () => {
+    const document = useDocumentStore.getState().documents[0];
+    const section = document.sections?.[0];
+    if (!section) {
+      throw new Error("Section not found");
+    }
+    useDocumentStore.getState().goToSection(section.id, document.id);
+    render(<Sidebar />);
+    const before = useDocumentStore.getState().documents[0].pages[0].elements.length;
+
+    await userEvent.dblClick(screen.getByRole("button", { name: "Selecionar Cartela Moctes" }));
+
+    expect(useDocumentStore.getState().documents[0].pages[0].elements).toHaveLength(before);
+    expect(useEditorStore.getState().undoStack).toHaveLength(0);
+  });
+
   it("Enter na miniatura adiciona uma unica vez", async () => {
     render(<Sidebar />);
     const thumbnail = screen.getByRole("button", { name: "Selecionar Tape azul" });
