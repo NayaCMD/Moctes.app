@@ -6,6 +6,7 @@ import "./styles/notebook-cover.css";
 import "./styles/notebook-divider.css";
 import "./styles/notebook-tabs.css";
 import "./styles/notebook-page.css";
+import "./styles/notebook-animation.css";
 import App from "./App.tsx";
 
 createRoot(document.getElementById("root")!).render(

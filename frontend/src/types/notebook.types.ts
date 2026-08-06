@@ -60,3 +60,15 @@ export type NotebookSurface =
       sectionId: string;
       page: Page;
     };
+
+export type NotebookTransitionDirection = "forward" | "backward";
+
+export type NotebookTransitionPhase = "preparing" | "running";
+
+export interface NotebookTransitionState {
+  documentId: string;
+  fromSurfaceId: string;
+  toSurfaceId: string;
+  direction: NotebookTransitionDirection;
+  phase: NotebookTransitionPhase;
+}

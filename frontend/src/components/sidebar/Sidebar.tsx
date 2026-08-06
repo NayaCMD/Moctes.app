@@ -39,6 +39,7 @@ export function Sidebar() {
   const updatePage = useDocumentStore((state) => state.updatePage);
   const recordHistory = useEditorStore((state) => state.recordHistory);
   const cancelAssetDrag = useEditorStore((state) => state.cancelAssetDrag);
+  const notebookTransition = useEditorStore((state) => state.notebookTransition);
   const folders = useAssetLibraryStore((state) => state.folders);
   const assets = useAssetLibraryStore((state) => state.assets);
   const activeFolderId = useAssetLibraryStore((state) => state.activeFolderId);
@@ -67,7 +68,9 @@ export function Sidebar() {
   const [assetPendingDelete, setAssetPendingDelete] = useState<LibraryAsset | null>(null);
   const activeFolder = folders.find((folder) => folder.id === activeFolderId) ?? folders[0];
   const activeDocument = documents.find((document) => document.id === activeDocumentId);
-  const editableActivePage = activeDocument ? getEditableActivePage(activeDocument) : undefined;
+  const editableActivePage = activeDocument
+    ? getEditableActivePage(activeDocument, { notebookTransition })
+    : undefined;
   const visibleAssets = getFilteredAssets();
   const activeFolderCount = assets.filter((asset) => asset.folderId === activeFolder?.id).length;
   const statusMessage = importError?.message ?? feedbackMessage;

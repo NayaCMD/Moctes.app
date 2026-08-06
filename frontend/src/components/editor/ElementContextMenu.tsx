@@ -30,9 +30,12 @@ export function ElementContextMenu() {
   const setClipboardElement = useEditorStore((state) => state.setClipboardElement);
   const incrementPasteCount = useEditorStore((state) => state.incrementPasteCount);
   const recordHistory = useEditorStore((state) => state.recordHistory);
+  const notebookTransition = useEditorStore((state) => state.notebookTransition);
   const menuRef = useClickOutside<HTMLDivElement>(() => closeContextMenu(), contextMenu.open);
   const activeDocument = documents.find((document) => document.id === activeDocumentId);
-  const activePage = activeDocument ? getEditableActivePage(activeDocument) : undefined;
+  const activePage = activeDocument
+    ? getEditableActivePage(activeDocument, { notebookTransition })
+    : undefined;
   const element = findElement(activePage?.elements ?? [], contextMenu.elementId);
 
   useEffect(() => {

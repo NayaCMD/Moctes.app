@@ -4,6 +4,7 @@ import type { AssetCategory } from "../types/asset.types";
 import type { MoctesDocument } from "../types/document.types";
 import type { ActiveToolPanel, DrawingToolSettings, EditorMode, RulerState, ZoomMode } from "../types/editor.types";
 import type { DrawingPoint, PageElement, PageElementType } from "../types/element.types";
+import type { NotebookTransitionState } from "../types/notebook.types";
 import { cloneDocuments, pushHistorySnapshot } from "../utils/history.utils";
 
 export type EditorInteractionMode = "idle" | "dragging" | "resizing" | "rotating";
@@ -82,6 +83,7 @@ interface EditorStoreState {
   editingTextElementId: string | null;
   editorZoom: number;
   zoomMode: ZoomMode;
+  notebookTransition: NotebookTransitionState | null;
   setEditorMode: (mode: EditorMode) => void;
   setActiveToolPanel: (panel: ActiveToolPanel) => void;
   beginInteraction: (state: EditorInteractionState) => void;
@@ -109,6 +111,10 @@ interface EditorStoreState {
   setZoomMode: (mode: ZoomMode) => void;
   fitEditorZoom: () => void;
   resetEditorZoom: () => void;
+  beginNotebookTransition: (transition: NotebookTransitionState) => boolean;
+  startNotebookTransition: (transition: NotebookTransitionState) => boolean;
+  completeNotebookTransition: (transition: NotebookTransitionState) => void;
+  cancelNotebookTransition: (documentId?: string) => void;
   setDrawingSettings: (settings: Partial<DrawingToolSettings>) => void;
   setRuler: (state: Partial<RulerState>) => void;
   resetEditorSession: () => void;
@@ -173,6 +179,7 @@ export const useEditorStore = create<EditorStoreState>()((set, get) => ({
   editingTextElementId: null,
   editorZoom: 1,
   zoomMode: "fit",
+  notebookTransition: null,
   setEditorMode: (editorMode) =>
     set({
       editorMode,
@@ -286,6 +293,54 @@ export const useEditorStore = create<EditorStoreState>()((set, get) => ({
   setZoomMode: (zoomMode) => set({ zoomMode }),
   fitEditorZoom: () => set({ zoomMode: "fit" }),
   resetEditorZoom: () => set({ editorZoom: 1, zoomMode: "manual" }),
+  beginNotebookTransition: (notebookTransition) => {
+    if (get().notebookTransition) {
+      return false;
+    }
+
+    set({
+      notebookTransition,
+      interaction: { mode: "idle", elementId: null, preview: null },
+      transferPreview: null,
+      drawingPreview: null,
+      assetDrag: idleAssetDrag,
+      contextMenu: { open: false, elementId: null, x: 0, y: 0 },
+      editingTextElementId: null,
+    });
+    return true;
+  },
+  startNotebookTransition: (notebookTransition) => {
+    const current = get().notebookTransition;
+    if (
+      !current ||
+      current.documentId !== notebookTransition.documentId ||
+      current.fromSurfaceId !== notebookTransition.fromSurfaceId ||
+      current.toSurfaceId !== notebookTransition.toSurfaceId
+    ) {
+      return false;
+    }
+
+    set({ notebookTransition: { ...current, phase: "running" } });
+    return true;
+  },
+  completeNotebookTransition: (notebookTransition) => {
+    const current = get().notebookTransition;
+    if (
+      current &&
+      current.documentId === notebookTransition.documentId &&
+      current.fromSurfaceId === notebookTransition.fromSurfaceId &&
+      current.toSurfaceId === notebookTransition.toSurfaceId
+    ) {
+      set({ notebookTransition: null });
+    }
+  },
+  cancelNotebookTransition: (documentId) =>
+    set((state) => ({
+      notebookTransition:
+        state.notebookTransition && (!documentId || state.notebookTransition.documentId === documentId)
+          ? null
+          : state.notebookTransition,
+    })),
   setDrawingSettings: (settings) =>
     set((state) => ({ drawingSettings: { ...state.drawingSettings, ...settings } })),
   setRuler: (ruler) => set((state) => ({ ruler: { ...state.ruler, ...ruler } })),
@@ -309,6 +364,7 @@ export const useEditorStore = create<EditorStoreState>()((set, get) => ({
       editingTextElementId: null,
       editorZoom: 1,
       zoomMode: "fit",
+      notebookTransition: null,
     }),
 }));
 

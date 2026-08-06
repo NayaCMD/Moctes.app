@@ -62,4 +62,31 @@ describe("useEditorKeyboardShortcuts notebook editing guard", () => {
     );
     expect(useEditorStore.getState().undoStack).toHaveLength(1);
   });
+
+  it("nao cola nem remove elementos enquanto o caderno esta em transicao", async () => {
+    const user = userEvent.setup();
+    const { document } = getNotebook();
+    const page = document.pages[0];
+    const element = page.elements[0];
+    const before = page.elements.length;
+    useEditorStore.getState().setClipboardElement(element);
+    useDocumentStore.getState().selectElement(element.id);
+    useDocumentStore.getState().goToPage(page.id, document.id);
+    useEditorStore.getState().beginNotebookTransition({
+      documentId: document.id,
+      fromSurfaceId: page.id,
+      toSurfaceId: document.pages[1].id,
+      direction: "forward",
+      phase: "running",
+    });
+
+    render(<KeyboardHarness />);
+    await user.keyboard("{Control>}v{/Control}");
+    await user.keyboard("{Delete}");
+
+    const updatedPage = useDocumentStore.getState().documents[0].pages[0];
+    expect(updatedPage.elements).toHaveLength(before);
+    expect(updatedPage.elements.some((item) => item.id === element.id)).toBe(true);
+    expect(useEditorStore.getState().undoStack).toHaveLength(0);
+  });
 });

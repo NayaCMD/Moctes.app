@@ -7,11 +7,13 @@ import {
   isFirstNotebookSurface,
   isLastNotebookSurface,
 } from "../../utils/notebookSurfaces.utils";
-import { useDocumentStore } from "../../stores/useDocumentStore";
 
 interface NotebookNavigationProps {
   document: MoctesDocument;
   activeSurface: NotebookSurface | undefined;
+  disabled?: boolean;
+  onPrevious: () => void;
+  onNext: () => void;
 }
 
 function getSurfaceLabel(
@@ -41,12 +43,13 @@ function getSurfaceLabel(
 export function NotebookNavigation({
   document,
   activeSurface,
+  disabled = false,
+  onPrevious,
+  onNext,
 }: NotebookNavigationProps) {
-  const goToPreviousSurface = useDocumentStore((state) => state.goToPreviousSurface);
-  const goToNextSurface = useDocumentStore((state) => state.goToNextSurface);
   const label = getSurfaceLabel(document, activeSurface);
-  const previousDisabled = !activeSurface || isFirstNotebookSurface(document, activeSurface.id);
-  const nextDisabled = !activeSurface || isLastNotebookSurface(document, activeSurface.id);
+  const previousDisabled = disabled || !activeSurface || isFirstNotebookSurface(document, activeSurface.id);
+  const nextDisabled = disabled || !activeSurface || isLastNotebookSurface(document, activeSurface.id);
 
   return (
     <div className="notebook-navigation" aria-label="Navegação do caderno">
@@ -55,7 +58,7 @@ export function NotebookNavigation({
         className="notebook-navigation-button"
         aria-label="Superfície anterior"
         disabled={previousDisabled}
-        onClick={() => goToPreviousSurface(document.id)}
+        onClick={onPrevious}
       >
         <ChevronLeft size={16} aria-hidden="true" />
       </button>
@@ -67,7 +70,7 @@ export function NotebookNavigation({
         className="notebook-navigation-button"
         aria-label="Próxima superfície"
         disabled={nextDisabled}
-        onClick={() => goToNextSurface(document.id)}
+        onClick={onNext}
       >
         <ChevronRight size={16} aria-hidden="true" />
       </button>

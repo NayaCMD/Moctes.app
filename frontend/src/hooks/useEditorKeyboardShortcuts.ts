@@ -24,7 +24,11 @@ export function useEditorKeyboardShortcuts() {
             const activeDocument = documentState.documents.find(
                 (document) => document.id === documentState.activeDocumentId,
             );
-            const editableActivePage = activeDocument ? getEditableActivePage(activeDocument) : undefined;
+            const editableActivePage = activeDocument
+                ? getEditableActivePage(activeDocument, {
+                    notebookTransition: editorState.notebookTransition,
+                })
+                : undefined;
             const selectedElement = editableActivePage
                 ? findPageElement(editableActivePage.elements, documentState.selectedElementId)
                 : null;

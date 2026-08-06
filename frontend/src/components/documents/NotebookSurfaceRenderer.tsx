@@ -6,11 +6,13 @@ import { NotebookDivider } from "./NotebookDivider";
 interface NotebookSurfaceRendererProps {
   document: MoctesDocument;
   activeSurface: NotebookSurface | undefined;
+  interactive?: boolean;
 }
 
 export function NotebookSurfaceRenderer({
   document,
   activeSurface,
+  interactive = true,
 }: NotebookSurfaceRendererProps) {
   if (!activeSurface) {
     return (
@@ -54,6 +56,7 @@ export function NotebookSurfaceRenderer({
       page={page}
       className="notebook-single-page"
       label={page.title || "Folha do caderno"}
+      interactive={interactive}
     />
   );
 }

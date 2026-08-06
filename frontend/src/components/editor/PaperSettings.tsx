@@ -66,13 +66,18 @@ export function PaperSettings() {
   const recordHistory = useEditorStore(
     (state) => state.recordHistory,
   );
+  const notebookTransition = useEditorStore(
+    (state) => state.notebookTransition,
+  );
 
   const activeDocument = documents.find(
     (document) => document.id === activeDocumentId,
   );
 
   const activePage = activeDocument
-    ? getEditableActivePage(activeDocument)
+    ? getEditableActivePage(activeDocument, {
+        notebookTransition,
+      })
     : undefined;
 
   const displayedPaperType =

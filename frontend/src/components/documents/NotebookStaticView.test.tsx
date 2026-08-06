@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import { initialDocuments } from "../../data/initialDocuments";
@@ -228,11 +228,23 @@ describe("Notebook visual estático", () => {
 
     await user.click(screen.getByRole("button", { name: "Próxima superfície" }));
 
+    const leaf = globalThis.document.querySelector(".notebook-leaf");
+    if (!leaf) {
+      throw new Error("Notebook leaf not found");
+    }
+    fireEvent.transitionEnd(leaf, { propertyName: "transform" });
+
     const activeAfterNext = getNotebookDocument().activeSurfaceId;
     expect(activeAfterNext).toBe(document.pages[0].id);
     expect(screen.getByLabelText("Folha 1 de 2")).toHaveTextContent("1");
 
     await user.click(screen.getByRole("button", { name: "Superfície anterior" }));
+
+    const previousLeaf = globalThis.document.querySelector(".notebook-leaf");
+    if (!previousLeaf) {
+      throw new Error("Notebook leaf not found");
+    }
+    fireEvent.transitionEnd(previousLeaf, { propertyName: "transform" });
 
     expect(getNotebookDocument().activeSurfaceId).toBe(firstSurface.id);
   });

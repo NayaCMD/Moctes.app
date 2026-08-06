@@ -99,12 +99,15 @@ export function BottomToolbar() {
   const setVisibilityFilter = useEditorStore((state) => state.setVisibilityFilter);
   const drawingSettings = useEditorStore((state) => state.drawingSettings);
   const drawingPreview = useEditorStore((state) => state.drawingPreview);
+  const notebookTransition = useEditorStore((state) => state.notebookTransition);
   const ruler = useEditorStore((state) => state.ruler);
   const setDrawingSettings = useEditorStore((state) => state.setDrawingSettings);
   const setRuler = useEditorStore((state) => state.setRuler);
   const libraryAssets = useAssetLibraryStore((state) => state.assets);
   const activeDocument = documents.find((document) => document.id === activeDocumentId);
-  const activePage = activeDocument ? getEditableActivePage(activeDocument) : undefined;
+  const activePage = activeDocument
+    ? getEditableActivePage(activeDocument, { notebookTransition })
+    : undefined;
   const activePageIndex = activeDocument?.pages.findIndex((page) => page.id === activePage?.id) ?? -1;
   const destinationLabel =
     !activePage

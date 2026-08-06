@@ -5,6 +5,7 @@ interface NotebookTabsProps {
   sections: NotebookSection[];
   activeSectionId: string | null;
   onSelectSection: (sectionId: string) => void;
+  disabled?: boolean;
 }
 
 function clampTabPosition(position: number): number {
@@ -15,6 +16,7 @@ export function NotebookTabs({
   sections,
   activeSectionId,
   onSelectSection,
+  disabled = false,
 }: NotebookTabsProps) {
   if (sections.length === 0) {
     return null;
@@ -38,6 +40,7 @@ export function NotebookTabs({
             className="notebook-tab"
             aria-current={activeSectionId === section.id ? "true" : undefined}
             aria-label={`Abrir divisória ${title}`}
+            disabled={disabled}
             style={style}
             onClick={() => onSelectSection(section.id)}
           >
