@@ -249,6 +249,17 @@ describe("Notebook visual estático", () => {
     expect(getNotebookDocument().activeSurfaceId).toBe(firstSurface.id);
   });
 
+  it("ignora key repeat durante navegação por teclado", () => {
+    const document = getNotebookDocument();
+    const initialSurfaceId = document.activeSurfaceId;
+
+    render(<NotebookHarness />);
+    fireEvent.keyDown(window, { key: "PageDown", repeat: true });
+
+    expect(getNotebookDocument().activeSurfaceId).toBe(initialSurfaceId);
+    expect(globalThis.document.querySelector(".notebook-leaf")).not.toBeInTheDocument();
+  });
+
   it("a última folha não possui próxima superfície e divisórias não entram na contagem", () => {
     const document = getNotebookDocument();
     const lastPage = document.pages.at(-1);
@@ -293,6 +304,7 @@ describe("Notebook visual estático", () => {
     expect(screen.getByLabelText(notepad.pages[0].title ?? "Folha do bloco de notas")).toHaveClass(
       "paper-surface",
     );
+    expect(globalThis.document.querySelector(".notebook-transition-layer")).not.toBeInTheDocument();
   });
 
   it("a folha ativa continua expondo elementos editáveis", () => {

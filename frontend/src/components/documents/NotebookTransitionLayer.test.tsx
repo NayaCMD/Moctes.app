@@ -130,6 +130,13 @@ describe("NotebookTransitionLayer", () => {
     fireEvent.transitionEnd(leaf, { propertyName: "opacity" });
     expect(onTransitionComplete).not.toHaveBeenCalled();
 
+    const child = leaf.querySelector(".notebook-leaf__front");
+    if (!child) {
+      throw new Error("Notebook leaf child not found");
+    }
+    fireEvent.transitionEnd(child, { propertyName: "transform" });
+    expect(onTransitionComplete).not.toHaveBeenCalled();
+
     fireEvent.transitionEnd(leaf, { propertyName: "transform" });
     expect(onTransitionComplete).toHaveBeenCalledTimes(1);
   });

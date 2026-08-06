@@ -184,6 +184,44 @@ describe("useNotebookTransition", () => {
     expect(useEditorStore.getState().notebookTransition).toBeNull();
   });
 
+  it("cancelamento depois da fase running limpa fallback antigo sem mudar superficie", () => {
+    const notebook = activeNotebook();
+    const surfaces = buildNotebookSurfaces(notebook);
+    useDocumentStore.getState().setActiveSurface(surfaces[0].id, notebook.id);
+    const { result } = renderHook(() => useNotebookTransition(activeNotebook()));
+
+    act(() => {
+      expect(result.current.navigateToSurface(surfaces[1].id)).toBe(true);
+    });
+    advanceTransitionToRunning();
+    act(() => {
+      result.current.cancelTransition();
+      vi.advanceTimersByTime(NOTEBOOK_FLIP_DURATION_MS + NOTEBOOK_FLIP_FALLBACK_MARGIN_MS);
+    });
+
+    expect(activeNotebook().activeSurfaceId).toBe(surfaces[0].id);
+    expect(useEditorStore.getState().notebookTransition).toBeNull();
+  });
+
+  it("desmontagem limpa transicao, timers e requestAnimationFrame", () => {
+    const notebook = activeNotebook();
+    const surfaces = buildNotebookSurfaces(notebook);
+    useDocumentStore.getState().setActiveSurface(surfaces[0].id, notebook.id);
+    const { result, unmount } = renderHook(() => useNotebookTransition(activeNotebook()));
+
+    act(() => {
+      expect(result.current.navigateToSurface(surfaces[1].id)).toBe(true);
+    });
+    advanceTransitionToRunning();
+    act(() => {
+      unmount();
+      vi.advanceTimersByTime(NOTEBOOK_FLIP_DURATION_MS + NOTEBOOK_FLIP_FALLBACK_MARGIN_MS);
+    });
+
+    expect(activeNotebook().activeSurfaceId).toBe(surfaces[0].id);
+    expect(useEditorStore.getState().notebookTransition).toBeNull();
+  });
+
   it("movimento reduzido navega imediatamente sem folha 3D", () => {
     vi.useRealTimers();
     vi.restoreAllMocks();
