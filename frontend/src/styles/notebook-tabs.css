@@ -55,3 +55,27 @@
     outline: 3px solid var(--accent);
     outline-offset: 2px;
 }
+
+@media (max-width: 900px) {
+    .notebook-tabs {
+        top: 24px;
+        right: auto;
+        bottom: auto;
+        left: 112px;
+
+        max-width: calc(100% - 224px);
+        flex-direction: row;
+        align-items: flex-start;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 4px 6px 10px;
+    }
+
+    .notebook-tab {
+        width: auto;
+        max-width: 132px;
+        min-height: 30px;
+        flex: 0 0 auto;
+        border-radius: 10px 10px 4px 4px;
+    }
+}
