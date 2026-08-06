@@ -1,0 +1,57 @@
+.notebook-tabs {
+    position: absolute;
+    top: 34px;
+    right: 26px;
+    bottom: 84px;
+    z-index: var(--notebook-z-tabs);
+
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+    overflow-y: auto;
+    padding: 4px 0 4px 12px;
+
+    pointer-events: none;
+}
+
+.notebook-tab {
+    position: relative;
+
+    display: flex;
+    width: 108px;
+    min-height: 34px;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 7px 12px;
+
+    border: 1px solid rgba(75, 94, 116, 0.2);
+    border-radius: 12px 0 0 12px;
+
+    background: var(--notebook-tab-color, #bde4eb);
+    color: var(--notebook-tab-text-color, #26324a);
+    box-shadow: 0 6px 10px rgba(61, 62, 67, 0.12);
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 900;
+    text-align: left;
+
+    pointer-events: auto;
+}
+
+.notebook-tab span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.notebook-tab[aria-current="true"] {
+    outline: 2px solid rgba(38, 50, 74, 0.32);
+    outline-offset: 2px;
+}
+
+.notebook-tab:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+}

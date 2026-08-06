@@ -1,0 +1,115 @@
+.notebook-stage {
+    position: absolute;
+    inset: 16px 92px 16px 112px;
+    z-index: var(--notebook-z-surface);
+
+    display: grid;
+    place-items: center;
+
+    pointer-events: none;
+}
+
+.notebook-surface {
+    position: relative;
+
+    display: grid;
+    width: var(--notebook-surface-width);
+    height: var(--notebook-surface-height);
+    place-items: stretch;
+
+    pointer-events: auto;
+}
+
+.notebook-single-page {
+    width: var(--notebook-surface-width);
+    height: var(--notebook-surface-height);
+    overflow: hidden;
+
+    border: 1px solid rgba(202, 196, 188, 0.72);
+    border-radius: 18px;
+
+    box-shadow:
+        0 8px 0 rgba(230, 225, 216, 0.88),
+        0 18px 22px rgba(65, 83, 96, 0.14),
+        inset 0 0 22px rgba(161, 143, 119, 0.05),
+        inset 0 10px 18px rgba(255, 255, 255, 0.58);
+}
+
+.notebook-empty-surface {
+    display: grid;
+    width: var(--notebook-surface-width);
+    height: var(--notebook-surface-height);
+    place-items: center;
+
+    border: 1px dashed rgba(80, 91, 112, 0.32);
+    border-radius: 18px;
+
+    background: rgba(255, 255, 255, 0.62);
+    color: var(--ink-muted);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.notebook-navigation {
+    position: absolute;
+    right: 0;
+    bottom: 18px;
+    left: 0;
+    z-index: var(--notebook-z-navigation);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    pointer-events: none;
+}
+
+.notebook-navigation-button,
+.notebook-navigation-indicator {
+    display: inline-flex;
+    min-width: 36px;
+    height: 34px;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid color-mix(in srgb, var(--app-border) 72%, transparent);
+    border-radius: 8px;
+
+    background: color-mix(in srgb, var(--app-surface) 88%, white);
+    color: var(--ink);
+    box-shadow: 0 8px 18px rgba(68, 86, 105, 0.11);
+
+    pointer-events: auto;
+}
+
+.notebook-navigation-button {
+    cursor: pointer;
+}
+
+.notebook-navigation-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.notebook-navigation-button:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.notebook-navigation-indicator {
+    min-width: 54px;
+    max-width: 180px;
+    padding: 0 12px;
+    overflow: hidden;
+
+    font-size: 12px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.notebook-view-v2[data-binding="top"] .notebook-stage {
+    inset: 72px 92px 16px 92px;
+}

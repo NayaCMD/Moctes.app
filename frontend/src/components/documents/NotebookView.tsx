@@ -1,66 +1,57 @@
 import type { MoctesDocument } from "../../types/document.types";
-import { getOrderedPages } from "../../utils/document.utils";
+import type { NotebookBinding } from "../../types/notebook.types";
+import { useDocumentStore } from "../../stores/useDocumentStore";
+import { createDefaultNotebookCover } from "../../utils/notebookMigration.utils";
+import {
+  buildNotebookSurfaces,
+  getActiveSectionId,
+  getSurfaceById,
+} from "../../utils/notebookSurfaces.utils";
 import { BindingRings } from "./BindingRings";
-import { DocumentPage } from "./DocumentPage";
-import { NotebookCoverShell } from "./NotebookCoverShell";
-import { NotebookCoverTabs } from "./NotebookCoverTabs";
+import { NotebookCover } from "./NotebookCover";
+import { NotebookNavigation } from "./NotebookNavigation";
+import { NotebookSurfaceRenderer } from "./NotebookSurfaceRenderer";
+import { NotebookTabs } from "./NotebookTabs";
 
 interface NotebookViewProps {
   document: MoctesDocument;
 }
 
 export function NotebookView({ document }: NotebookViewProps) {
-  const pages = getOrderedPages(document);
-  const activeIndex = Math.max(
-    0,
-    pages.findIndex((page) => page.id === document.activePageId),
-  );
-  const leftIndex = activeIndex % 2 === 0 ? activeIndex : activeIndex - 1;
-  const leftPage = pages[leftIndex] ?? pages[0];
-  const rightPage = pages[leftIndex + 1];
-  const placeholderRightPage = {
-    ...leftPage,
-    id: "notebook-placeholder-right",
-    title: "Página vazia",
-    elements: [],
-  };
+  const goToSection = useDocumentStore((state) => state.goToSection);
+  const surfaces = buildNotebookSurfaces(document);
+  const activeSurface =
+    (document.activeSurfaceId
+      ? getSurfaceById(document, document.activeSurfaceId)
+      : undefined) ?? surfaces[0];
+  const activeSectionId = getActiveSectionId(document, activeSurface);
+  const cover = document.cover ?? createDefaultNotebookCover(document);
+  const binding: NotebookBinding = document.binding ?? "left";
 
   return (
-    <article className="notebook-view" aria-label={document.title}>
-      {document.dividers.map((divider) => (
-        <div
-          key={divider.id}
-          className="notebook-divider-tab"
-          style={{ backgroundColor: divider.color }}
-          title={divider.name}
-          aria-hidden="true"
+    <article
+      className="notebook-view notebook-view-v2"
+      data-binding={binding}
+      aria-label={document.title}
+    >
+      <NotebookCover cover={cover} binding={binding} />
+      <div className="notebook-binding" data-binding={binding}>
+        <BindingRings
+          orientation={binding === "top" ? "horizontal" : "vertical"}
+          count={binding === "top" ? 8 : 7}
         />
-      ))}
-      <NotebookCoverTabs side="left" position="top" color={document.leftTabColor ?? "rgba(72, 73, 79, 0.62)"} />
-      <NotebookCoverTabs side="right" position="top" color={document.rightTabColor ?? "rgba(181, 222, 230, 0.76)"} />
-      <NotebookCoverTabs side="left" position="bottom" color={document.leftTabColor ?? "rgba(72, 73, 79, 0.54)"} />
-      <NotebookCoverTabs side="right" position="bottom" color={document.rightTabColor ?? "rgba(181, 222, 230, 0.64)"} />
-
-      <NotebookCoverShell document={document}>
-        <div className="notebook-spread">
-          <DocumentPage
-            page={leftPage}
-            className="notebook-page notebook-page-left"
-            label={leftPage.title ?? "Página esquerda"}
-          />
-
-          <div className="notebook-spine">
-            <BindingRings />
-          </div>
-
-          <DocumentPage
-            page={rightPage ?? placeholderRightPage}
-            className="notebook-page notebook-page-right"
-            label={rightPage?.title ?? "Página vazia"}
-            interactive={Boolean(rightPage)}
-          />
+      </div>
+      <NotebookTabs
+        sections={document.sections ?? []}
+        activeSectionId={activeSectionId}
+        onSelectSection={(sectionId) => goToSection(sectionId, document.id)}
+      />
+      <div className="notebook-stage">
+        <div className="notebook-surface">
+          <NotebookSurfaceRenderer document={document} activeSurface={activeSurface} />
         </div>
-      </NotebookCoverShell>
+      </div>
+      <NotebookNavigation document={document} activeSurface={activeSurface} />
     </article>
   );
 }

@@ -1,0 +1,68 @@
+.notebook-divider-surface {
+    position: relative;
+
+    display: flex;
+    width: var(--notebook-surface-width);
+    height: var(--notebook-surface-height);
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+
+    border: 1px solid rgba(81, 96, 116, 0.18);
+    border-radius: 18px;
+
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0.04)),
+        var(--divider-color, #d9f4f7);
+
+    color: var(--divider-text-color, #26324a);
+    box-shadow:
+        0 8px 0 rgba(226, 221, 214, 0.62),
+        0 18px 22px rgba(65, 83, 96, 0.14),
+        inset 0 0 0 5px rgba(255, 255, 255, 0.24);
+}
+
+.notebook-divider-tab-marker {
+    position: absolute;
+    top: var(--divider-tab-position, 24%);
+    right: -42px;
+
+    width: 54px;
+    height: 86px;
+
+    border: 1px solid rgba(81, 96, 116, 0.16);
+    border-left: 0;
+    border-radius: 0 14px 14px 0;
+
+    background: var(--divider-tab-color, #bde4eb);
+    box-shadow: 5px 8px 12px rgba(65, 83, 96, 0.13);
+}
+
+.notebook-divider-content {
+    display: grid;
+    gap: 12px;
+    justify-items: center;
+    max-width: 72%;
+    text-align: center;
+}
+
+.notebook-divider-kicker {
+    color: color-mix(in srgb, var(--divider-text-color, #26324a) 68%, transparent);
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
+.notebook-divider-content h2 {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-size: 38px;
+    line-height: 1.08;
+}
+
+.notebook-divider-content p {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 800;
+}
