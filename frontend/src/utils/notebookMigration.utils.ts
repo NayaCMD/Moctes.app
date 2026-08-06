@@ -134,80 +134,80 @@ export function migrateDocumentToSchemaV2(document: MoctesDocument): MoctesDocum
   return migratedDocument;
 }
 
-export function syncNotebookSectionsWithPages(document: MoctesDocument): MoctesDocument {
+export function reconcileNotebookDocument(document: MoctesDocument): MoctesDocument {
   if (document.type !== "notebook") {
     return document;
   }
 
   const migrated = migrateDocumentToSchemaV2(document);
   const currentSections = migrated.sections ?? [];
-  const sectionByDividerId = new Map<string, NotebookSection>(
-    currentSections.map((section) => [
-      section.divider.id,
-      {
-        ...section,
-        pages: [] as Page[],
-      },
-    ]),
-  );
-
-  for (const divider of migrated.dividers) {
-    if (!sectionByDividerId.has(divider.id)) {
-      const section = createSectionFromLegacyDivider(divider, sectionByDividerId.size);
-      sectionByDividerId.set(section.divider.id, section);
-    }
-  }
-
+  const pageContentById = new Map(migrated.pages.map((page) => [page.id, page]));
+  const assignedPageIds = new Set<string>();
   const defaultDividerId = `divider-${migrated.id}-default`;
-  let defaultSection: NotebookSection | undefined = sectionByDividerId.get(defaultDividerId);
-  const pageDividerIds = new Set(migrated.pages.map((page) => page.dividerId).filter(Boolean));
-  const needsDefaultSection = migrated.pages.some(
-    (page) => !page.dividerId || !sectionByDividerId.has(page.dividerId),
-  );
-
-  if (!defaultSection && needsDefaultSection) {
-    defaultSection = createDefaultNotebookSection({
-      documentId: migrated.id,
-      dividerId: defaultDividerId,
-      tabPosition: sectionByDividerId.size,
+  let order = 1;
+  const nextSections: NotebookSection[] = currentSections.map((section, sectionIndex) => {
+    const divider = {
+      ...section.divider,
+      tabPosition: Number.isFinite(section.divider.tabPosition)
+        ? section.divider.tabPosition
+        : sectionIndex,
+    };
+    const pages = section.pages.flatMap((sectionPage) => {
+      if (assignedPageIds.has(sectionPage.id)) {
+        return [];
+      }
+      const contentPage = pageContentById.get(sectionPage.id) ?? sectionPage;
+      assignedPageIds.add(contentPage.id);
+      return [{ ...contentPage, dividerId: divider.id, order: order++ }];
     });
-    sectionByDividerId.set(defaultSection.divider.id, defaultSection);
-  }
 
-  const nextPages = migrated.pages.map((page) => {
-    if (page.dividerId && sectionByDividerId.has(page.dividerId)) {
-      return page;
-    }
-    if (!defaultSection) {
-      defaultSection = createDefaultNotebookSection({
-        documentId: migrated.id,
-        dividerId: defaultDividerId,
-        tabPosition: sectionByDividerId.size,
-      });
-      sectionByDividerId.set(defaultSection.divider.id, defaultSection);
-    }
-    return { ...page, dividerId: defaultDividerId };
+    return {
+      ...section,
+      divider,
+      pages,
+    };
   });
 
-  for (const page of nextPages) {
-    const section = page.dividerId ? sectionByDividerId.get(page.dividerId) : undefined;
-    section?.pages.push(page);
+  const orphanPages = migrated.pages.filter((page) => !assignedPageIds.has(page.id));
+  if (orphanPages.length > 0 || nextSections.length === 0) {
+    const existingDefaultIndex = nextSections.findIndex(
+      (section) => section.divider.id === defaultDividerId,
+    );
+    const defaultSection =
+      existingDefaultIndex >= 0
+        ? nextSections[existingDefaultIndex]
+        : createDefaultNotebookSection({
+            documentId: migrated.id,
+            dividerId: defaultDividerId,
+            tabPosition: nextSections.length,
+          });
+    const defaultPages = orphanPages.map((page) => ({
+      ...page,
+      dividerId: defaultSection.divider.id,
+      order: order++,
+    }));
+    const nextDefaultSection = {
+      ...defaultSection,
+      pages: [...defaultSection.pages, ...defaultPages],
+    };
+
+    if (existingDefaultIndex >= 0) {
+      nextSections[existingDefaultIndex] = nextDefaultSection;
+    } else {
+      nextSections.push(nextDefaultSection);
+    }
   }
 
-  const nextSections = currentSections
-    .map((section) => sectionByDividerId.get(section.divider.id))
-    .filter((section): section is NotebookSection => Boolean(section))
-    .concat(
-      [...sectionByDividerId.values()].filter((section) =>
-        !currentSections.some((current) => current.divider.id === section.divider.id),
-      ),
-    )
-    .filter((section) => section.pages.length > 0 || pageDividerIds.has(section.divider.id));
+  const nextPages = nextSections.flatMap((section) => section.pages);
+  const activePageId = nextPages.some((page) => page.id === migrated.activePageId)
+    ? migrated.activePageId
+    : nextPages[0]?.id ?? migrated.activePageId;
 
   const nextDocument: MoctesDocument = {
     ...migrated,
     pages: nextPages,
-    sections: nextSections.length > 0 ? nextSections : [createDefaultNotebookSection({ documentId: migrated.id })],
+    sections: nextSections,
+    activePageId,
   };
   const nextDividers = ensureLegacyDividers(nextDocument, nextDocument.sections ?? []);
   const withDividers = { ...nextDocument, dividers: nextDividers };
@@ -229,6 +229,8 @@ export function syncNotebookSectionsWithPages(document: MoctesDocument): MoctesD
 
   return syncedDocument;
 }
+
+export const syncNotebookSectionsWithPages = reconcileNotebookDocument;
 
 function createSectionFromLegacyDivider(divider: Divider, index: number): NotebookSection {
   return {
@@ -253,7 +255,7 @@ function ensureLegacyDividers(
   return sections.map((section, index) => {
     const existing = existingById.get(section.divider.id);
     return existing
-      ? { ...existing, order: index + 1 }
+      ? { ...existing, name: section.title, color: section.divider.color, order: index + 1 }
       : {
           id: section.divider.id,
           documentId: document.id,

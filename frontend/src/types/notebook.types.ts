@@ -25,6 +25,28 @@ export interface NotebookSection {
   pages: Page[];
 }
 
+export interface AddNotebookSectionOptions {
+  title?: string;
+  color?: string;
+  createInitialPage?: boolean;
+  index?: number;
+}
+
+export type RemoveSectionStrategy =
+  | {
+      mode: "delete-pages";
+    }
+  | {
+      mode: "move-pages";
+      targetSectionId: string;
+    };
+
+export type NotebookDividerUpdate = Partial<
+  Pick<NotebookDivider, "color" | "tabColor" | "textColor" | "tabPosition">
+> & {
+  title?: string;
+};
+
 export type NotebookSurface =
   | {
       kind: "divider";
