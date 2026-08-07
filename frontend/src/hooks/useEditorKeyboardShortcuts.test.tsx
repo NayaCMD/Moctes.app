@@ -25,12 +25,19 @@ function getNotebook() {
 describe("useEditorKeyboardShortcuts notebook editing guard", () => {
   beforeEach(() => resetStores());
 
+  function openNotebook() {
+    useEditorStore.setState({
+      notebookBook: { documentId: getNotebook().document.id, phase: "open" },
+    });
+  }
+
   it("nao cola nem remove elementos da pagina anterior quando a divisoria esta aberta", async () => {
     const user = userEvent.setup();
     const { document, section } = getNotebook();
     const page = document.pages[0];
     const element = page.elements[0];
     const before = page.elements.length;
+    openNotebook();
     useEditorStore.getState().setClipboardElement(element);
     useDocumentStore.getState().selectElement(element.id);
     useDocumentStore.getState().goToSection(section.id, document.id);
@@ -51,6 +58,7 @@ describe("useEditorKeyboardShortcuts notebook editing guard", () => {
     const { document } = getNotebook();
     const page = document.pages[0];
     const element = page.elements[0];
+    openNotebook();
     useEditorStore.getState().setClipboardElement(element);
     useDocumentStore.getState().goToPage(page.id, document.id);
 
@@ -69,6 +77,7 @@ describe("useEditorKeyboardShortcuts notebook editing guard", () => {
     const page = document.pages[0];
     const element = page.elements[0];
     const before = page.elements.length;
+    openNotebook();
     useEditorStore.getState().setClipboardElement(element);
     useDocumentStore.getState().selectElement(element.id);
     useDocumentStore.getState().goToPage(page.id, document.id);

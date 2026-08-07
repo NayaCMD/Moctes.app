@@ -31,10 +31,11 @@ export function ElementContextMenu() {
   const incrementPasteCount = useEditorStore((state) => state.incrementPasteCount);
   const recordHistory = useEditorStore((state) => state.recordHistory);
   const notebookTransition = useEditorStore((state) => state.notebookTransition);
+  const notebookBook = useEditorStore((state) => state.notebookBook);
   const menuRef = useClickOutside<HTMLDivElement>(() => closeContextMenu(), contextMenu.open);
   const activeDocument = documents.find((document) => document.id === activeDocumentId);
   const activePage = activeDocument
-    ? getEditableActivePage(activeDocument, { notebookTransition })
+    ? getEditableActivePage(activeDocument, { notebookBook, notebookTransition })
     : undefined;
   const element = findElement(activePage?.elements ?? [], contextMenu.elementId);
 

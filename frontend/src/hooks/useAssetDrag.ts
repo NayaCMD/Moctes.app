@@ -51,6 +51,7 @@ export function useAssetDrag({ asset, previewSrc, onSelect, onAdded }: UseAssetD
             : undefined;
         const page = document
             ? getEditableActivePage(document, {
+                notebookBook: editorState.notebookBook,
                 notebookTransition: editorState.notebookTransition,
             })
             : undefined;
@@ -79,6 +80,7 @@ export function useAssetDrag({ asset, previewSrc, onSelect, onAdded }: UseAssetD
         const document = documentState.documents.find((item) => item.id === target.documentId);
         const page = document
             ? getEditableActivePage(document, {
+                notebookBook: editorState.notebookBook,
                 notebookTransition: editorState.notebookTransition,
             })
             : undefined;

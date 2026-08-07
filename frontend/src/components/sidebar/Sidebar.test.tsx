@@ -10,6 +10,12 @@ import { Sidebar } from "./Sidebar";
 describe("Sidebar", () => {
   beforeEach(() => resetStores());
 
+  function openNotebook() {
+    useEditorStore.setState({
+      notebookBook: { documentId: useDocumentStore.getState().documents[0].id, phase: "open" },
+    });
+  }
+
   it("renderiza sidebar simples com quatro secoes e biblioteca avancada fechada", () => {
     render(<Sidebar />);
 
@@ -48,6 +54,7 @@ describe("Sidebar", () => {
   });
 
   it("seleciona asset e adiciona por duplo clique", async () => {
+    openNotebook();
     render(<Sidebar />);
     const before = useDocumentStore.getState().documents[0].pages[0].elements.length;
 
@@ -64,6 +71,7 @@ describe("Sidebar", () => {
   });
 
   it("nao adiciona asset quando a divisoria do caderno esta aberta", async () => {
+    openNotebook();
     const document = useDocumentStore.getState().documents[0];
     const section = document.sections?.[0];
     if (!section) {
@@ -80,6 +88,7 @@ describe("Sidebar", () => {
   });
 
   it("nao adiciona asset por duplo clique durante a transicao do caderno", async () => {
+    openNotebook();
     const document = useDocumentStore.getState().documents[0];
     const page = document.pages[0];
     useDocumentStore.getState().goToPage(page.id, document.id);
@@ -100,6 +109,7 @@ describe("Sidebar", () => {
   });
 
   it("Enter na miniatura adiciona uma unica vez", async () => {
+    openNotebook();
     render(<Sidebar />);
     const thumbnail = screen.getByRole("button", { name: "Selecionar Tape azul" });
     const before = useDocumentStore.getState().documents[0].pages[0].elements.length;
@@ -144,6 +154,7 @@ describe("Sidebar", () => {
   });
 
   it("drag valido cria um asset exatamente na pagina alvo", () => {
+    openNotebook();
     render(<Sidebar />);
     const thumbnail = screen.getByRole("button", { name: "Selecionar Cartela Moctes" });
     const state = useDocumentStore.getState();
@@ -168,6 +179,7 @@ describe("Sidebar", () => {
   });
 
   it("drop valido nao insere asset durante a transicao do caderno", () => {
+    openNotebook();
     render(<Sidebar />);
     const state = useDocumentStore.getState();
     const page = state.documents[0].pages[0];

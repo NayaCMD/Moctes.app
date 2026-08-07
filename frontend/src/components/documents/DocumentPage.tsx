@@ -259,6 +259,7 @@ export function DocumentPage({
         <PageElementRenderer
           key={element.id}
           element={element}
+          interactive={interactive}
           pageElement={pageElement}
           pageId={page.id}
         />

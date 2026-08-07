@@ -100,14 +100,22 @@ export function BottomToolbar() {
   const drawingSettings = useEditorStore((state) => state.drawingSettings);
   const drawingPreview = useEditorStore((state) => state.drawingPreview);
   const notebookTransition = useEditorStore((state) => state.notebookTransition);
+  const notebookBook = useEditorStore((state) => state.notebookBook);
   const ruler = useEditorStore((state) => state.ruler);
   const setDrawingSettings = useEditorStore((state) => state.setDrawingSettings);
   const setRuler = useEditorStore((state) => state.setRuler);
   const libraryAssets = useAssetLibraryStore((state) => state.assets);
   const activeDocument = documents.find((document) => document.id === activeDocumentId);
   const activePage = activeDocument
-    ? getEditableActivePage(activeDocument, { notebookTransition })
+    ? getEditableActivePage(activeDocument, { notebookBook, notebookTransition })
     : undefined;
+  const notebookPhase =
+    activeDocument?.type === "notebook" && notebookBook?.documentId === activeDocument.id
+      ? notebookBook.phase
+      : activeDocument?.type === "notebook"
+        ? "closed"
+        : "open";
+  const toolbarDisabled = activeDocument?.type === "notebook" && notebookPhase !== "open";
   const activePageIndex = activeDocument?.pages.findIndex((page) => page.id === activePage?.id) ?? -1;
   const destinationLabel =
     !activePage
@@ -278,7 +286,12 @@ export function BottomToolbar() {
 
   return (
     <div className="bottom-toolbar-wrap">
-      <div className="bottom-toolbar" role="toolbar" aria-label="Ferramentas">
+      <div
+        className="bottom-toolbar"
+        role="toolbar"
+        aria-label="Ferramentas"
+        data-disabled={toolbarDisabled}
+      >
         {tools.map((tool) => (
           <ToolButton
             key={tool.id}
@@ -292,6 +305,7 @@ export function BottomToolbar() {
                 : (tool.id === "favorite" && Boolean(activeDocument?.favorite)) ||
                   (tool.id === "preview" && visibilityPanelOpen)
             }
+            disabled={toolbarDisabled}
             onSelect={handleSelect}
           />
         ))}

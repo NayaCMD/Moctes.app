@@ -9,6 +9,7 @@ interface NotebookTransitionLayerProps {
   activeSurface: NotebookSurface | undefined;
   binding: NotebookBinding;
   transition: NotebookTransitionState | null;
+  interactive?: boolean;
   onTransitionComplete: (transition: NotebookTransitionState) => void;
 }
 
@@ -17,12 +18,17 @@ export function NotebookTransitionLayer({
   activeSurface,
   binding,
   transition,
+  interactive = true,
   onTransitionComplete,
 }: NotebookTransitionLayerProps) {
   if (!transition) {
     return (
       <div className="notebook-surface">
-        <NotebookSurfaceRenderer document={document} activeSurface={activeSurface} />
+        <NotebookSurfaceRenderer
+          document={document}
+          activeSurface={activeSurface}
+          interactive={interactive}
+        />
       </div>
     );
   }

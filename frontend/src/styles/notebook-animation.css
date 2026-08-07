@@ -1,13 +1,13 @@
 .notebook-stage {
-    perspective: 1800px;
+    perspective: 1600px;
 }
 
 .notebook-transition-layer {
     position: relative;
 
     display: grid;
-    width: var(--notebook-surface-width);
-    height: var(--notebook-surface-height);
+    width: 100%;
+    height: 100%;
     place-items: stretch;
 
     transform-style: preserve-3d;
@@ -27,10 +27,15 @@
     position: absolute;
     inset: 0;
     z-index: 2;
+    width: var(--book-page-width);
+    height: var(--book-page-height);
 
+    clip-path: inset(-18px -28px -18px -18px round 16px);
     transform-style: preserve-3d;
-    transition: transform var(--notebook-flip-duration, 650ms) cubic-bezier(0.65, 0, 0.22, 1);
-    will-change: transform;
+    transition:
+        transform var(--notebook-flip-duration, 650ms) cubic-bezier(0.65, 0, 0.22, 1),
+        clip-path var(--notebook-flip-duration, 650ms) cubic-bezier(0.65, 0, 0.22, 1);
+    will-change: transform, clip-path;
     pointer-events: none;
 }
 
@@ -49,19 +54,71 @@
 
     overflow: hidden;
 
-    border-radius: 18px;
+    border-radius: 6px 15px 15px 6px;
 
     backface-visibility: hidden;
     transform-style: preserve-3d;
 }
 
+.notebook-leaf__front {
+    background: #fffdf8;
+    transition: opacity var(--notebook-flip-duration, 650ms) cubic-bezier(0.65, 0, 0.22, 1);
+}
+
+.notebook-leaf__curl-face {
+    position: absolute;
+    inset: 0;
+    transform-origin: left center;
+    transition:
+        opacity var(--notebook-flip-duration, 650ms) cubic-bezier(0.65, 0, 0.22, 1),
+        transform var(--notebook-flip-duration, 650ms) cubic-bezier(0.65, 0, 0.22, 1),
+        border-radius var(--notebook-flip-duration, 650ms) cubic-bezier(0.65, 0, 0.22, 1);
+}
+
+.notebook-page-curl {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition:
+        opacity var(--notebook-flip-duration, 650ms) cubic-bezier(0.65, 0, 0.22, 1),
+        transform var(--notebook-flip-duration, 650ms) cubic-bezier(0.65, 0, 0.22, 1);
+    pointer-events: none;
+}
+
+.notebook-page-curl__paper {
+    fill: url(#notebook-curl-paper);
+}
+
+.notebook-page-curl__shadow,
+.notebook-page-curl__highlight,
+.notebook-page-curl__edge {
+    fill: none;
+    stroke-linecap: round;
+}
+
+.notebook-page-curl__shadow {
+    stroke: url(#notebook-curl-shadow);
+    stroke-width: 12;
+}
+
+.notebook-page-curl__highlight {
+    stroke: url(#notebook-curl-highlight);
+    stroke-width: 5;
+}
+
+.notebook-page-curl__edge {
+    stroke: rgba(170, 160, 145, 0.28);
+    stroke-width: 0.65;
+}
+
 .notebook-leaf__back {
     background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.08)),
-        #f7fbfb;
+        radial-gradient(circle at 72% 52%, rgba(190, 178, 160, 0.1), transparent 34%),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.18), rgba(235, 229, 218, 0.22)),
+        #fffaf2;
     box-shadow:
-        inset 0 0 0 1px rgba(117, 138, 155, 0.16),
-        inset 0 16px 24px rgba(255, 255, 255, 0.36);
+        inset 0 0 0 1px rgba(117, 138, 155, 0.11),
+        inset -18px 0 28px rgba(128, 118, 101, 0.08);
     pointer-events: none;
 }
 
@@ -74,19 +131,46 @@
 }
 
 .notebook-leaf[data-direction="forward"][data-binding="left"] {
-    transform: rotateY(0deg);
+    transform: rotateY(0deg) skewY(0deg) scaleX(1);
 }
 
 .notebook-leaf[data-direction="forward"][data-binding="left"][data-phase="running"] {
-    transform: rotateY(-180deg);
+    clip-path: polygon(0 0, 96% 4%, 100% 42%, 86% 80%, 72% 100%, 0 100%);
+    transform: rotateY(-178deg) skewY(-3deg) scaleX(0.96);
 }
 
 .notebook-leaf[data-direction="backward"][data-binding="left"] {
-    transform: rotateY(-180deg);
+    clip-path: polygon(0 0, 96% 4%, 100% 42%, 86% 80%, 72% 100%, 0 100%);
+    transform: rotateY(-178deg) skewY(-3deg) scaleX(0.96);
 }
 
 .notebook-leaf[data-direction="backward"][data-binding="left"][data-phase="running"] {
-    transform: rotateY(0deg);
+    clip-path: inset(-18px -28px -18px -18px round 16px);
+    transform: rotateY(0deg) skewY(0deg) scaleX(1);
+}
+
+.notebook-leaf[data-direction="forward"][data-binding="left"][data-phase="running"] .notebook-leaf__curl-face,
+.notebook-leaf[data-direction="backward"][data-binding="left"] .notebook-leaf__curl-face {
+    border-radius: 6px 48px 74px 6px;
+    opacity: 0.18;
+    transform: skewY(2.4deg) scaleX(0.985);
+}
+
+.notebook-leaf[data-direction="forward"][data-binding="left"][data-phase="running"] .notebook-page-curl,
+.notebook-leaf[data-direction="backward"][data-binding="left"] .notebook-page-curl {
+    opacity: 0.9;
+    transform: translateX(-4px) skewY(2deg);
+}
+
+.notebook-leaf[data-direction="backward"][data-binding="left"][data-phase="running"] .notebook-leaf__curl-face {
+    border-radius: 6px 15px 15px 6px;
+    opacity: 1;
+    transform: skewY(0deg) scaleX(1);
+}
+
+.notebook-leaf[data-direction="backward"][data-binding="left"][data-phase="running"] .notebook-page-curl {
+    opacity: 0;
+    transform: translateX(0) skewY(0deg);
 }
 
 .notebook-leaf[data-direction="forward"][data-binding="top"] {
@@ -94,11 +178,11 @@
 }
 
 .notebook-leaf[data-direction="forward"][data-binding="top"][data-phase="running"] {
-    transform: rotateX(178deg);
+    transform: rotateX(176deg) skewX(2deg) scaleY(0.97);
 }
 
 .notebook-leaf[data-direction="backward"][data-binding="top"] {
-    transform: rotateX(178deg);
+    transform: rotateX(176deg) skewX(2deg) scaleY(0.97);
 }
 
 .notebook-leaf[data-direction="backward"][data-binding="top"][data-phase="running"] {
@@ -106,7 +190,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .notebook-leaf {
+    .notebook-leaf,
+    .notebook-page-curl,
+    .notebook-leaf__curl-face {
         transition-duration: 1ms;
     }
 }

@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, FilePlus } from "lucide-react";
 import type { MoctesDocument } from "../../types/document.types";
 import type { NotebookSurface } from "../../types/notebook.types";
 import {
@@ -7,6 +7,7 @@ import {
   isFirstNotebookSurface,
   isLastNotebookSurface,
 } from "../../utils/notebookSurfaces.utils";
+import { MovePageToSectionMenu } from "./MovePageToSectionMenu";
 
 interface NotebookNavigationProps {
   document: MoctesDocument;
@@ -14,6 +15,8 @@ interface NotebookNavigationProps {
   disabled?: boolean;
   onPrevious: () => void;
   onNext: () => void;
+  onAddPage?: (sectionId: string) => void;
+  onMovePage?: (pageId: string, sectionId: string) => void;
 }
 
 function getSurfaceLabel(
@@ -46,10 +49,13 @@ export function NotebookNavigation({
   disabled = false,
   onPrevious,
   onNext,
+  onAddPage,
+  onMovePage,
 }: NotebookNavigationProps) {
   const label = getSurfaceLabel(document, activeSurface);
   const previousDisabled = disabled || !activeSurface || isFirstNotebookSurface(document, activeSurface.id);
   const nextDisabled = disabled || !activeSurface || isLastNotebookSurface(document, activeSurface.id);
+  const activeSectionId = activeSurface?.sectionId;
 
   return (
     <div className="notebook-navigation" aria-label="Navegação do caderno">
@@ -65,6 +71,25 @@ export function NotebookNavigation({
       <output className="notebook-navigation-indicator" aria-label={label.ariaLabel}>
         {label.text}
       </output>
+      {activeSectionId && onAddPage && (
+        <button
+          type="button"
+          className="notebook-navigation-button"
+          aria-label="Adicionar folha à seção"
+          disabled={disabled}
+          onClick={() => onAddPage(activeSectionId)}
+        >
+          <FilePlus size={15} aria-hidden="true" />
+        </button>
+      )}
+      {activeSurface?.kind === "page" && onMovePage && (
+        <MovePageToSectionMenu
+          sections={document.sections ?? []}
+          currentSectionId={activeSurface.sectionId}
+          disabled={disabled}
+          onMove={(sectionId) => onMovePage(activeSurface.id, sectionId)}
+        />
+      )}
       <button
         type="button"
         className="notebook-navigation-button"

@@ -26,6 +26,7 @@ export function useEditorKeyboardShortcuts() {
             );
             const editableActivePage = activeDocument
                 ? getEditableActivePage(activeDocument, {
+                    notebookBook: editorState.notebookBook,
                     notebookTransition: editorState.notebookTransition,
                 })
                 : undefined;

@@ -5,6 +5,7 @@ import type {
   NotebookTransitionDirection,
   NotebookTransitionPhase,
 } from "../../types/notebook.types";
+import { NotebookPageCurl } from "./NotebookPageCurl";
 import { NotebookSurfaceRenderer } from "./NotebookSurfaceRenderer";
 
 interface NotebookLeafProps {
@@ -31,11 +32,14 @@ export function NotebookLeaf({
       aria-hidden="true"
     >
       <div className="notebook-leaf__front">
-        <NotebookSurfaceRenderer
-          document={document}
-          activeSurface={surface}
-          interactive={false}
-        />
+        <div className="notebook-leaf__curl-face">
+          <NotebookSurfaceRenderer
+            document={document}
+            activeSurface={surface}
+            interactive={false}
+          />
+        </div>
+        <NotebookPageCurl direction={direction} phase={phase} />
       </div>
       <div className="notebook-leaf__back" aria-hidden="true" />
     </div>

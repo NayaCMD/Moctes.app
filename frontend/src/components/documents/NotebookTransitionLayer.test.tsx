@@ -37,6 +37,23 @@ function transition(
 describe("NotebookTransitionLayer", () => {
   beforeEach(() => resetStores());
 
+  it("não renderiza NotebookPageCurl quando não há flip", () => {
+    const notebookDocument = getNotebook();
+    const surfaces = buildNotebookSurfaces(notebookDocument);
+
+    render(
+      <NotebookTransitionLayer
+        document={notebookDocument}
+        activeSurface={surfaces[0]}
+        binding="left"
+        transition={null}
+        onTransitionComplete={() => undefined}
+      />,
+    );
+
+    expect(document.querySelector(".notebook-page-curl")).not.toBeInTheDocument();
+  });
+
   it("forward renderiza destino como base e origem como folha", () => {
     const notebookDocument = getNotebook();
     const surfaces = buildNotebookSurfaces(notebookDocument);
@@ -56,6 +73,7 @@ describe("NotebookTransitionLayer", () => {
       surfaces[1].id,
     );
     expect(document.querySelector(".notebook-leaf")).toHaveAttribute("data-direction", "forward");
+    expect(document.querySelector(".notebook-page-curl")).toHaveAttribute("data-direction", "forward");
     expect(document.querySelector(".notebook-leaf .notebook-divider-surface")).toBeInTheDocument();
   });
 
@@ -79,6 +97,7 @@ describe("NotebookTransitionLayer", () => {
     );
     expect(document.querySelector(".notebook-leaf")).toHaveAttribute("data-binding", "top");
     expect(document.querySelector(".notebook-leaf")).toHaveAttribute("data-direction", "backward");
+    expect(document.querySelector(".notebook-page-curl")).toHaveAttribute("data-direction", "backward");
   });
 
   it("nao duplica a mesma DocumentPage durante page-to-page", () => {

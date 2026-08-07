@@ -72,3 +72,10 @@ export interface NotebookTransitionState {
   direction: NotebookTransitionDirection;
   phase: NotebookTransitionPhase;
 }
+
+export type NotebookBookPhase = "closed" | "opening" | "open" | "closing";
+
+export interface NotebookBookState {
+  documentId: string;
+  phase: NotebookBookPhase;
+}

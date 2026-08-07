@@ -1,6 +1,6 @@
 import type { Divider, DocumentType, MoctesDocument } from "../types/document.types";
 import type { PageElement } from "../types/element.types";
-import type { NotebookTransitionState } from "../types/notebook.types";
+import type { NotebookBookState, NotebookTransitionState } from "../types/notebook.types";
 import type { Page } from "../types/page.types";
 import type { PaperType } from "../types/theme.types";
 import { migrateDocumentToSchemaV2 } from "./notebookMigration.utils";
@@ -38,6 +38,7 @@ export function isNotebookPageSurfaceActive(document: MoctesDocument): boolean {
 }
 
 interface EditableActivePageOptions {
+  notebookBook?: NotebookBookState | null;
   notebookTransition?: NotebookTransitionState | null;
 }
 
@@ -50,6 +51,14 @@ export function getEditableActivePage(
   }
 
   if (options.notebookTransition?.documentId === document.id) {
+    return undefined;
+  }
+
+  const notebookPhase =
+    options.notebookBook?.documentId === document.id
+      ? options.notebookBook.phase
+      : "closed";
+  if (notebookPhase !== "open") {
     return undefined;
   }
 

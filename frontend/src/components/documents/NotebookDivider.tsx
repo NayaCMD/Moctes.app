@@ -26,7 +26,6 @@ export function NotebookDivider({ section, isActive }: NotebookDividerProps) {
       aria-label={`Divisória da seção ${title}`}
       style={style}
     >
-      <div className="notebook-divider-tab-marker" aria-hidden="true" />
       <div className="notebook-divider-content">
         <span className="notebook-divider-kicker">Divisória</span>
         <h2>{title}</h2>

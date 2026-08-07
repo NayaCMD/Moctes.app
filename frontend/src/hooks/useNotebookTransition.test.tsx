@@ -69,6 +69,9 @@ function advanceTransitionToRunning() {
 describe("useNotebookTransition", () => {
   beforeEach(() => {
     resetStores();
+    useEditorStore.setState({
+      notebookBook: { documentId: activeNotebook().id, phase: "open" },
+    });
     installReducedMotion(false);
     installAnimationTimers();
   });

@@ -3,9 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import { initialDocuments } from "../../data/initialDocuments";
 import { useDocumentStore } from "../../stores/useDocumentStore";
+import { useEditorStore } from "../../stores/useEditorStore";
 import { resetStores } from "../../test/helpers/resetStores";
 import type { MoctesDocument } from "../../types/document.types";
 import type { NotebookSection, NotebookSurface } from "../../types/notebook.types";
+import { getEditableActivePage } from "../../utils/document.utils";
 import { reconcileNotebookDocument } from "../../utils/notebookMigration.utils";
 import { buildNotebookSurfaces } from "../../utils/notebookSurfaces.utils";
 import { NotebookCover } from "./NotebookCover";
@@ -58,8 +60,130 @@ function NotebookHarness() {
   return document ? <NotebookView document={document} /> : null;
 }
 
+function openNotebookForTest() {
+  useEditorStore.setState({
+    notebookBook: { documentId: getNotebookDocument().id, phase: "open" },
+  });
+}
+
 describe("Notebook visual estático", () => {
   beforeEach(() => resetStores());
+
+  it("NotebookView inicia fechado e bloqueia edição da página ativa", () => {
+    const document = getNotebookDocument();
+
+    render(<NotebookView document={document} />);
+
+    expect(screen.getByRole("button", { name: "Abrir caderno" })).toBeInTheDocument();
+    expect(screen.getByText("Caderno fechado")).toBeInTheDocument();
+    expect(globalThis.document.querySelector(".notebook-ring")).toHaveAttribute("data-mode", "closed");
+    expect(getEditableActivePage(document, {
+      notebookBook: useEditorStore.getState().notebookBook,
+      notebookTransition: useEditorStore.getState().notebookTransition,
+    })).toBeUndefined();
+  });
+
+  it("clique na capa inicia opening sem alterar activeSurfaceId e transitionend conclui open", async () => {
+    const user = userEvent.setup();
+    const initialSurfaceId = getNotebookDocument().activeSurfaceId;
+
+    render(<NotebookHarness />);
+    const cover = screen.getByRole("button", { name: "Abrir caderno" });
+    await user.click(cover);
+
+    expect(useEditorStore.getState().notebookBook).toMatchObject({
+      documentId: getNotebookDocument().id,
+      phase: "opening",
+    });
+    expect(getNotebookDocument().activeSurfaceId).toBe(initialSurfaceId);
+
+    fireEvent.transitionEnd(cover, { propertyName: "transform" });
+
+    expect(useEditorStore.getState().notebookBook?.phase).toBe("open");
+    expect(getNotebookDocument().activeSurfaceId).toBe(initialSurfaceId);
+    expect(screen.getByRole("button", { name: "Fechar caderno" })).toBeInTheDocument();
+  });
+
+  it("fechar caderno inicia closing e volta a bloquear edição", async () => {
+    const user = userEvent.setup();
+    openNotebookForTest();
+    render(<NotebookHarness />);
+
+    await user.click(screen.getByRole("button", { name: "Fechar caderno" }));
+    expect(useEditorStore.getState().notebookBook?.phase).toBe("closing");
+
+    const cover = screen.getByRole("button", { name: "Abrir caderno", hidden: true });
+    fireEvent.transitionEnd(cover, { propertyName: "transform" });
+
+    expect(useEditorStore.getState().notebookBook?.phase).toBe("closed");
+    expect(getEditableActivePage(getNotebookDocument(), {
+      notebookBook: useEditorStore.getState().notebookBook,
+      notebookTransition: useEditorStore.getState().notebookTransition,
+    })).toBeUndefined();
+  });
+
+  it("closed não inicia page flip, mas open inicia normalmente", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<NotebookHarness />);
+
+    await user.click(screen.getByRole("button", { name: "Próxima superfície" }));
+    expect(globalThis.document.querySelector(".notebook-leaf")).not.toBeInTheDocument();
+
+    openNotebookForTest();
+    rerender(<NotebookHarness />);
+    await user.click(screen.getByRole("button", { name: "Próxima superfície" }));
+    expect(globalThis.document.querySelector(".notebook-leaf")).toBeInTheDocument();
+  });
+
+  it("open renderiza spread com folha de guarda, slot direito ativo e sem duas páginas editáveis", () => {
+    const document = getNotebookDocument();
+    const firstSection = getSection(document);
+    useDocumentStore.getState().goToSection(firstSection.id, document.id);
+    openNotebookForTest();
+
+    render(<NotebookHarness />);
+
+    expect(globalThis.document.querySelector(".notebook-guard-page")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: `Divisória da seção ${firstSection.title}` })).toBeInTheDocument();
+    expect(globalThis.document.querySelectorAll(".notebook-spread-slot[data-editable='true']")).toHaveLength(0);
+  });
+
+  it("open coloca a superfície anterior no slot esquerdo e a página ativa editável no direito", () => {
+    const document = getNotebookDocument();
+    useDocumentStore.getState().goToPage(document.pages[0].id, document.id);
+    openNotebookForTest();
+
+    render(<NotebookHarness />);
+
+    expect(globalThis.document.querySelector(".notebook-spread-slot[data-side='left'] .notebook-divider-surface")).toBeInTheDocument();
+    expect(globalThis.document.querySelector(".notebook-stage .paper-surface")).toHaveAttribute(
+      "data-page-id",
+      document.pages[0].id,
+    );
+    expect(globalThis.document.querySelectorAll(".notebook-stage .paper-surface[data-active-page='true']")).toHaveLength(1);
+  });
+
+  it("slot esquerdo renderiza elementos somente leitura e fora do foco", () => {
+    const document = getNotebookDocument();
+    const secondPage = document.pages[1];
+
+    if (!secondPage) {
+      throw new Error("Second notebook page not found");
+    }
+
+    useDocumentStore.getState().goToPage(secondPage.id, document.id);
+    openNotebookForTest();
+
+    render(<NotebookHarness />);
+
+    const leftElement = globalThis.document.querySelector<HTMLElement>(
+      ".notebook-spread-slot[data-side='left'] .page-element-frame",
+    );
+    expect(leftElement).toBeInTheDocument();
+    expect(leftElement).toHaveAttribute("data-readonly", "true");
+    expect(leftElement).not.toHaveAttribute("role");
+    expect(leftElement).not.toHaveAttribute("tabindex");
+  });
 
   it("NotebookCover usa os valores da capa e fica decorativo", () => {
     render(
@@ -111,13 +235,14 @@ describe("Notebook visual estático", () => {
 
     render(
       <NotebookTabs
+        documentId={getNotebookDocument().id}
         sections={[firstSection, secondSection]}
         activeSectionId={secondSection.id}
         onSelectSection={(sectionId) => selectedSections.push(sectionId)}
       />,
     );
 
-    const tabs = screen.getAllByRole("button");
+    const tabs = screen.getAllByRole("button", { name: /Abrir divisória/i });
     expect(tabs.map((tab) => tab.textContent)).toEqual([firstSection.title, "Back-end"]);
     expect(screen.getByRole("button", { name: "Abrir divisória Back-end" })).toHaveAttribute(
       "aria-current",
@@ -192,6 +317,62 @@ describe("Notebook visual estático", () => {
     expect(screen.getByRole("region", { name: `Divisória da seção ${firstSection.title}` })).toBeInTheDocument();
   });
 
+  it("NotebookView isola capa, stage, abas, argolas e navegação dentro do shell compacto", () => {
+    openNotebookForTest();
+    render(<NotebookView document={getNotebookDocument()} />);
+
+    const shell = document.querySelector<HTMLElement>(".notebook-shell");
+    const cover = document.querySelector<HTMLElement>(".notebook-shell > .notebook-cover");
+    const stage = document.querySelector<HTMLElement>(".notebook-spread > .notebook-stage");
+    const spine = document.querySelector<HTMLElement>(".notebook-spread > .notebook-spread-spine");
+    const tabs = document.querySelector<HTMLElement>(".notebook-shell > .notebook-tabs");
+    const navigation = document.querySelector<HTMLElement>(".notebook-shell > .notebook-navigation");
+    const surface = document.querySelector<HTMLElement>(".notebook-surface");
+    const ring = document.querySelector<HTMLElement>(".notebook-spread-spine .notebook-ring");
+
+    expect(shell).toBeInTheDocument();
+    expect(cover).toBeInTheDocument();
+    expect(stage).toBeInTheDocument();
+    expect(spine).toBeInTheDocument();
+    expect(ring).toBeInTheDocument();
+    expect(ring?.tagName.toLowerCase()).toBe("svg");
+    expect(ring).toHaveAttribute("data-mode", "open");
+    expect(tabs).toBeInTheDocument();
+    expect(navigation).toBeInTheDocument();
+    expect(stage).toContainElement(surface);
+    expect(stage).not.toContainElement(tabs);
+    expect(stage).not.toContainElement(spine);
+    expect(stage).not.toContainElement(navigation);
+  });
+
+  it("mantém tabs, rings e navegação fora da folha rotativa", async () => {
+    const user = userEvent.setup();
+    openNotebookForTest();
+    render(<NotebookHarness />);
+
+    await user.click(screen.getByRole("button", { name: "Próxima superfície" }));
+
+    const shell = document.querySelector<HTMLElement>(".notebook-shell");
+    const stage = document.querySelector<HTMLElement>(".notebook-stage");
+    const leaf = document.querySelector<HTMLElement>(".notebook-leaf");
+    const tabs = document.querySelector<HTMLElement>(".notebook-tabs");
+    const spine = document.querySelector<HTMLElement>(".notebook-spread-spine");
+    const navigation = document.querySelector<HTMLElement>(".notebook-navigation");
+
+    expect(shell).toContainElement(tabs);
+    expect(stage).toContainElement(leaf);
+    expect(leaf).not.toContainElement(tabs);
+    expect(leaf).not.toContainElement(spine);
+    expect(leaf).not.toContainElement(navigation);
+    expect(spine?.querySelector(".notebook-ring")).toBeInTheDocument();
+  });
+
+  it("NotebookDivider não renderiza aba visual duplicada", () => {
+    render(<NotebookDivider section={getSection(getNotebookDocument())} isActive />);
+
+    expect(document.querySelector(".notebook-divider-tab-marker")).not.toBeInTheDocument();
+  });
+
   it("abas do NotebookView abrem a divisória e não alteram activePageId para ID de divisória", async () => {
     const user = userEvent.setup();
     useDocumentStore.getState().addSection(getNotebookDocument().id, {
@@ -202,6 +383,7 @@ describe("Notebook visual estático", () => {
     const targetSection = getSection(document, 1);
     const previousActivePageId = document.activePageId;
 
+    openNotebookForTest();
     render(<NotebookHarness />);
     await user.click(screen.getByRole("button", { name: "Abrir divisória Back-end" }));
 
@@ -221,6 +403,7 @@ describe("Notebook visual estático", () => {
     }
 
     useDocumentStore.getState().goToSection(getSection(document).id, document.id);
+    openNotebookForTest();
     render(<NotebookHarness />);
 
     expect(screen.getByRole("button", { name: "Superfície anterior" })).toBeDisabled();
@@ -253,6 +436,7 @@ describe("Notebook visual estático", () => {
     const document = getNotebookDocument();
     const initialSurfaceId = document.activeSurfaceId;
 
+    openNotebookForTest();
     render(<NotebookHarness />);
     fireEvent.keyDown(window, { key: "PageDown", repeat: true });
 
@@ -269,6 +453,7 @@ describe("Notebook visual estático", () => {
     }
 
     useDocumentStore.getState().goToPage(lastPage.id, document.id);
+    openNotebookForTest();
     render(<NotebookHarness />);
 
     expect(screen.getByRole("button", { name: "Próxima superfície" })).toBeDisabled();
@@ -284,6 +469,9 @@ describe("Notebook visual estático", () => {
       activeSurfaceId: undefined,
     });
 
+    useEditorStore.setState({
+      notebookBook: { documentId: legacyDocument.id, phase: "open" },
+    });
     render(<NotebookView document={legacyDocument} />);
 
     expect(screen.getByRole("article", { name: "July Journal" })).toBeInTheDocument();

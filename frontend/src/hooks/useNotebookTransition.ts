@@ -15,6 +15,7 @@ import { usePrefersReducedMotion } from "./usePrefersReducedMotion";
 interface NotebookTransitionControls {
   transition: NotebookTransitionState | null;
   isTransitioning: boolean;
+  isBookOpen: boolean;
   navigateToSurface: (targetSurfaceId: string) => boolean;
   navigateNext: () => boolean;
   navigatePrevious: () => boolean;
@@ -39,6 +40,7 @@ function transitionMatches(
 export function useNotebookTransition(document: MoctesDocument): NotebookTransitionControls {
   const setActiveSurface = useDocumentStore((state) => state.setActiveSurface);
   const notebookTransition = useEditorStore((state) => state.notebookTransition);
+  const notebookBook = useEditorStore((state) => state.notebookBook);
   const beginNotebookTransition = useEditorStore((state) => state.beginNotebookTransition);
   const startNotebookTransition = useEditorStore((state) => state.startNotebookTransition);
   const completeNotebookTransition = useEditorStore((state) => state.completeNotebookTransition);
@@ -51,6 +53,7 @@ export function useNotebookTransition(document: MoctesDocument): NotebookTransit
   const rafIds = useRef<number[]>([]);
   const fallbackTimer = useRef<number | null>(null);
   const activeTransition = notebookTransition?.documentId === document.id ? notebookTransition : null;
+  const bookPhase = notebookBook?.documentId === document.id ? notebookBook.phase : "closed";
 
   const clearAsyncGuards = useCallback(() => {
     for (const rafId of rafIds.current) {
@@ -80,6 +83,12 @@ export function useNotebookTransition(document: MoctesDocument): NotebookTransit
 
   const navigateToSurface = useCallback(
     (targetSurfaceId: string) => {
+      const currentBook = useEditorStore.getState().notebookBook;
+      const currentBookPhase = currentBook?.documentId === document.id ? currentBook.phase : "closed";
+      if (currentBookPhase !== "open") {
+        return false;
+      }
+
       if (useEditorStore.getState().notebookTransition) {
         return false;
       }
@@ -183,6 +192,7 @@ export function useNotebookTransition(document: MoctesDocument): NotebookTransit
   return {
     transition: activeTransition,
     isTransitioning: Boolean(activeTransition),
+    isBookOpen: bookPhase === "open",
     navigateToSurface,
     navigateNext,
     navigatePrevious,

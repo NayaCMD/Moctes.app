@@ -1,50 +1,139 @@
-.notebook-stage {
+.notebook-spread {
     position: absolute;
-    inset: 16px 92px 16px 112px;
+    top: calc(var(--book-tab-row-height) + var(--book-cover-overhang-y));
+    left: var(--book-cover-overhang-x);
     z-index: var(--notebook-z-surface);
 
     display: grid;
-    place-items: center;
+    grid-template-columns: var(--book-page-width) var(--book-spine-width) var(--book-page-width);
+    width: calc((var(--book-page-width) * 2) + var(--book-spine-width));
+    height: var(--book-page-height);
+    overflow: visible;
 
     pointer-events: none;
+}
+
+.notebook-shell[data-book-phase="closed"] .notebook-spread,
+.notebook-shell[data-book-phase="opening"] .notebook-spread,
+.notebook-shell[data-book-phase="closing"] .notebook-spread {
+    left: var(--book-ring-outset);
+    grid-template-columns: var(--book-spine-width) var(--book-page-width);
+    width: calc(var(--book-spine-width) + var(--book-page-width));
+}
+
+.notebook-spread-slot {
+    position: relative;
+    display: grid;
+    width: var(--book-page-width);
+    height: var(--book-page-height);
+    place-items: stretch;
+    overflow: visible;
+    pointer-events: auto;
+}
+
+.notebook-spread-slot[data-side="left"] {
+    transform-origin: right center;
+}
+
+.notebook-shell[data-book-phase="closed"] .notebook-spread-slot[data-side="left"],
+.notebook-shell[data-book-phase="opening"] .notebook-spread-slot[data-side="left"],
+.notebook-shell[data-book-phase="closing"] .notebook-spread-slot[data-side="left"] {
+    display: none;
+}
+
+.notebook-guard-page {
+    border: 1px solid rgba(203, 196, 187, 0.62);
+    border-radius: 15px 5px 5px 15px;
+    background:
+        linear-gradient(90deg, rgba(116, 131, 136, 0.07), transparent 12%),
+        #fffdf8;
+    box-shadow:
+        inset -8px 0 16px rgba(130, 120, 103, 0.08),
+        0 7px 9px rgba(77, 81, 84, 0.08);
+}
+
+.notebook-spread-spine {
+    position: relative;
+    z-index: var(--notebook-z-binding);
+
+    display: flex;
+    width: var(--book-spine-width);
+    height: var(--book-page-height);
+    align-items: center;
+    justify-content: center;
+
+    background:
+        linear-gradient(90deg, rgba(81, 146, 159, 0.12), rgba(255, 255, 255, 0.6), rgba(81, 146, 159, 0.12));
+    box-shadow:
+        inset 4px 0 8px rgba(73, 124, 136, 0.08),
+        inset -4px 0 8px rgba(73, 124, 136, 0.08);
+
+    pointer-events: none;
+}
+
+.notebook-shell[data-book-phase="closed"] .notebook-spread-spine,
+.notebook-shell[data-book-phase="opening"] .notebook-spread-spine,
+.notebook-shell[data-book-phase="closing"] .notebook-spread-spine {
+    background: transparent;
+    box-shadow: none;
+}
+
+.notebook-stage {
+    position: relative;
+    z-index: var(--notebook-z-surface);
+
+    display: grid;
+    width: var(--book-page-width);
+    height: var(--book-page-height);
+    place-items: center;
+
+    pointer-events: auto;
 }
 
 .notebook-surface {
     position: relative;
 
     display: grid;
-    width: var(--notebook-surface-width);
-    height: var(--notebook-surface-height);
+    width: 100%;
+    height: 100%;
     place-items: stretch;
 
     pointer-events: auto;
 }
 
 .notebook-single-page {
-    width: var(--notebook-surface-width);
-    height: var(--notebook-surface-height);
+    width: var(--book-page-width);
+    height: var(--book-page-height);
     overflow: hidden;
 
-    border: 1px solid rgba(202, 196, 188, 0.72);
-    border-radius: 18px;
+    border: 1px solid rgba(203, 196, 187, 0.68);
+    border-radius: 6px 15px 15px 6px;
 
+    background-color: #fffdf8;
     box-shadow:
-        0 8px 0 rgba(230, 225, 216, 0.88),
-        0 18px 22px rgba(65, 83, 96, 0.14),
-        inset 0 0 22px rgba(161, 143, 119, 0.05),
-        inset 0 10px 18px rgba(255, 255, 255, 0.58);
+        inset 9px 0 18px rgba(112, 103, 92, 0.06),
+        0 6px 10px rgba(70, 75, 80, 0.1);
+}
+
+.notebook-spread-slot[data-side="left"] .notebook-single-page,
+.notebook-spread-slot[data-side="left"] .notebook-divider-surface,
+.notebook-spread-slot[data-side="left"].notebook-guard-page {
+    border-radius: 15px 6px 6px 15px;
+    box-shadow:
+        inset -9px 0 18px rgba(112, 103, 92, 0.06),
+        0 6px 10px rgba(70, 75, 80, 0.1);
 }
 
 .notebook-empty-surface {
     display: grid;
-    width: var(--notebook-surface-width);
-    height: var(--notebook-surface-height);
+    width: var(--book-page-width);
+    height: var(--book-page-height);
     place-items: center;
 
     border: 1px dashed rgba(80, 91, 112, 0.32);
-    border-radius: 18px;
+    border-radius: 15px;
 
-    background: rgba(255, 255, 255, 0.62);
+    background: rgba(255, 253, 248, 0.72);
     color: var(--ink-muted);
     font-size: 13px;
     font-weight: 800;
@@ -52,33 +141,38 @@
 
 .notebook-navigation {
     position: absolute;
-    right: 0;
-    bottom: 18px;
-    left: 0;
+    top: calc(var(--book-tab-row-height) + var(--book-page-height) + (var(--book-cover-overhang-y) * 2) + 9px);
+    left: 50%;
     z-index: var(--notebook-z-navigation);
 
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 5px;
 
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+.notebook-shell:not([data-book-phase="open"]) .notebook-navigation {
+    visibility: hidden;
     pointer-events: none;
 }
 
 .notebook-navigation-button,
 .notebook-navigation-indicator {
     display: inline-flex;
-    min-width: 36px;
-    height: 34px;
+    min-width: 28px;
+    height: 28px;
     align-items: center;
     justify-content: center;
 
     border: 1px solid color-mix(in srgb, var(--app-border) 72%, transparent);
     border-radius: 8px;
 
-    background: color-mix(in srgb, var(--app-surface) 88%, white);
+    background: color-mix(in srgb, var(--app-surface) 90%, white);
     color: var(--ink);
-    box-shadow: 0 8px 18px rgba(68, 86, 105, 0.11);
+    box-shadow: 0 7px 14px rgba(68, 86, 105, 0.1);
 
     pointer-events: auto;
 }
@@ -98,9 +192,9 @@
 }
 
 .notebook-navigation-indicator {
-    min-width: 54px;
-    max-width: 180px;
-    padding: 0 12px;
+    min-width: 40px;
+    max-width: 120px;
+    padding: 0 9px;
     overflow: hidden;
 
     font-size: 12px;
@@ -108,8 +202,4 @@
     font-variant-numeric: tabular-nums;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-.notebook-view-v2[data-binding="top"] .notebook-stage {
-    inset: 72px 92px 16px 92px;
 }

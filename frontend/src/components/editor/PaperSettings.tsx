@@ -69,6 +69,9 @@ export function PaperSettings() {
   const notebookTransition = useEditorStore(
     (state) => state.notebookTransition,
   );
+  const notebookBook = useEditorStore(
+    (state) => state.notebookBook,
+  );
 
   const activeDocument = documents.find(
     (document) => document.id === activeDocumentId,
@@ -76,6 +79,7 @@ export function PaperSettings() {
 
   const activePage = activeDocument
     ? getEditableActivePage(activeDocument, {
+        notebookBook,
         notebookTransition,
       })
     : undefined;

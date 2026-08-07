@@ -40,6 +40,7 @@ export function Sidebar() {
   const recordHistory = useEditorStore((state) => state.recordHistory);
   const cancelAssetDrag = useEditorStore((state) => state.cancelAssetDrag);
   const notebookTransition = useEditorStore((state) => state.notebookTransition);
+  const notebookBook = useEditorStore((state) => state.notebookBook);
   const folders = useAssetLibraryStore((state) => state.folders);
   const assets = useAssetLibraryStore((state) => state.assets);
   const activeFolderId = useAssetLibraryStore((state) => state.activeFolderId);
@@ -69,7 +70,7 @@ export function Sidebar() {
   const activeFolder = folders.find((folder) => folder.id === activeFolderId) ?? folders[0];
   const activeDocument = documents.find((document) => document.id === activeDocumentId);
   const editableActivePage = activeDocument
-    ? getEditableActivePage(activeDocument, { notebookTransition })
+    ? getEditableActivePage(activeDocument, { notebookBook, notebookTransition })
     : undefined;
   const visibleAssets = getFilteredAssets();
   const activeFolderCount = assets.filter((asset) => asset.folderId === activeFolder?.id).length;
