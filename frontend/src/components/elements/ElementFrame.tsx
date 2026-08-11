@@ -10,10 +10,17 @@ interface ElementFrameProps {
   element: PageElement;
   pageId: string;
   pageElement: HTMLElement | null;
+  interactive?: boolean;
   children: ReactNode;
 }
 
-export function ElementFrame({ element, pageId, pageElement, children }: ElementFrameProps) {
+export function ElementFrame({
+  element,
+  pageId,
+  pageElement,
+  interactive = true,
+  children,
+}: ElementFrameProps) {
   const documents = useDocumentStore((state) => state.documents);
   const selectedElementId = useDocumentStore((state) => state.selectedElementId);
   const selectElement = useDocumentStore((state) => state.selectElement);
@@ -46,6 +53,9 @@ export function ElementFrame({ element, pageId, pageElement, children }: Element
 
   const startDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
     event.stopPropagation();
+    if (!interactive) {
+      return;
+    }
     selectElement(element.id);
 
     if (editorMode === "erase") {
@@ -182,23 +192,30 @@ export function ElementFrame({ element, pageId, pageElement, children }: Element
 
   return (
     <div
-      role="button"
-      tabIndex={0}
+      role={interactive ? "button" : undefined}
+      tabIndex={interactive ? 0 : undefined}
       className="page-element-frame"
       data-selected={selected}
       data-locked={element.locked}
       data-hidden={element.hidden}
       data-eraser-active={editorMode === "erase"}
+      data-readonly={!interactive}
       style={style}
-      aria-label={`Selecionar elemento ${element.type}`}
+      aria-label={interactive ? `Selecionar elemento ${element.type}` : undefined}
       onPointerDown={startDrag}
       onContextMenu={(event) => {
+        if (!interactive) {
+          return;
+        }
         event.preventDefault();
         event.stopPropagation();
         selectElement(element.id);
         openContextMenu(element.id, event.clientX, event.clientY);
       }}
       onDoubleClick={(event) => {
+        if (!interactive) {
+          return;
+        }
         event.stopPropagation();
         if ((element.type === "text" || element.type === "post-it") && !element.locked) {
           event.preventDefault();

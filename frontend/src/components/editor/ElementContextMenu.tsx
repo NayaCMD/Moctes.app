@@ -4,6 +4,7 @@ import { useDocumentStore } from "../../stores/useDocumentStore";
 import { useEditorStore } from "../../stores/useEditorStore";
 import type { PageElement } from "../../types/element.types";
 import { useClickOutside } from "../../hooks/useClickOutside";
+import { getEditableActivePage } from "../../utils/document.utils";
 
 function findElement(elements: PageElement[], elementId: string | null): PageElement | null {
   return elements.find((element) => element.id === elementId) ?? null;
@@ -11,7 +12,7 @@ function findElement(elements: PageElement[], elementId: string | null): PageEle
 
 export function ElementContextMenu() {
   const documents = useDocumentStore((state) => state.documents);
-  const activePageId = useDocumentStore((state) => state.activePageId);
+  const activeDocumentId = useDocumentStore((state) => state.activeDocumentId);
   const duplicateElement = useDocumentStore((state) => state.duplicateElement);
   const deleteElement = useDocumentStore((state) => state.deleteElement);
   const pasteElement = useDocumentStore((state) => state.pasteElement);
@@ -29,8 +30,13 @@ export function ElementContextMenu() {
   const setClipboardElement = useEditorStore((state) => state.setClipboardElement);
   const incrementPasteCount = useEditorStore((state) => state.incrementPasteCount);
   const recordHistory = useEditorStore((state) => state.recordHistory);
+  const notebookTransition = useEditorStore((state) => state.notebookTransition);
+  const notebookBook = useEditorStore((state) => state.notebookBook);
   const menuRef = useClickOutside<HTMLDivElement>(() => closeContextMenu(), contextMenu.open);
-  const activePage = documents.flatMap((document) => document.pages).find((page) => page.id === activePageId);
+  const activeDocument = documents.find((document) => document.id === activeDocumentId);
+  const activePage = activeDocument
+    ? getEditableActivePage(activeDocument, { notebookBook, notebookTransition })
+    : undefined;
   const element = findElement(activePage?.elements ?? [], contextMenu.elementId);
 
   useEffect(() => {
@@ -112,9 +118,11 @@ export function ElementContextMenu() {
         disabled={!clipboardElement}
         onClick={() => run(() => {
           if (clipboardElement) {
-            const pastedId = pasteElement(activePageId, clipboardElement);
+            const pastedId = activePage ? pasteElement(activePage.id, clipboardElement) : null;
             incrementPasteCount();
-            selectElement(pastedId);
+            if (pastedId) {
+              selectElement(pastedId);
+            }
           }
         })}
       >

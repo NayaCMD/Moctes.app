@@ -23,6 +23,7 @@ import type { PageElement, ShapeAppearance } from "../../types/element.types";
 import { libraryAssetToSidebarAsset } from "../../utils/assetLibrary.utils";
 import { createElementFromAsset, createShapeElement } from "../../utils/element.utils";
 import { getElementSizing } from "../../utils/elementSizing.utils";
+import { getEditableActivePage } from "../../utils/document.utils";
 import { placeElementForInsertion } from "../../utils/insertion.utils";
 import { AssetImportModal } from "../sidebar/AssetImportModal";
 import { AssetPickerPanel } from "../tools/AssetPickerPanel";
@@ -98,14 +99,28 @@ export function BottomToolbar() {
   const setVisibilityFilter = useEditorStore((state) => state.setVisibilityFilter);
   const drawingSettings = useEditorStore((state) => state.drawingSettings);
   const drawingPreview = useEditorStore((state) => state.drawingPreview);
+  const notebookTransition = useEditorStore((state) => state.notebookTransition);
+  const notebookBook = useEditorStore((state) => state.notebookBook);
   const ruler = useEditorStore((state) => state.ruler);
   const setDrawingSettings = useEditorStore((state) => state.setDrawingSettings);
   const setRuler = useEditorStore((state) => state.setRuler);
   const libraryAssets = useAssetLibraryStore((state) => state.assets);
   const activeDocument = documents.find((document) => document.id === activeDocumentId);
-  const activePage = documents.flatMap((document) => document.pages).find((page) => page.id === activePageId);
-  const activePageIndex = activeDocument?.pages.findIndex((page) => page.id === activePageId) ?? -1;
+  const activePage = activeDocument
+    ? getEditableActivePage(activeDocument, { notebookBook, notebookTransition })
+    : undefined;
+  const notebookPhase =
+    activeDocument?.type === "notebook" && notebookBook?.documentId === activeDocument.id
+      ? notebookBook.phase
+      : activeDocument?.type === "notebook"
+        ? "closed"
+        : "open";
+  const toolbarDisabled = activeDocument?.type === "notebook" && notebookPhase !== "open";
+  const activePageIndex = activeDocument?.pages.findIndex((page) => page.id === activePage?.id) ?? -1;
   const destinationLabel =
+    !activePage
+      ? "Sem folha ativa"
+      :
     activeDocument?.type === "notebook" && activePageIndex >= 0
       ? `Destino: ${activePageIndex % 2 === 0 ? "Pagina esquerda" : "Pagina direita"}`
       : `Destino: Pagina ${activePage?.order ?? "-"}`;
@@ -271,7 +286,12 @@ export function BottomToolbar() {
 
   return (
     <div className="bottom-toolbar-wrap">
-      <div className="bottom-toolbar" role="toolbar" aria-label="Ferramentas">
+      <div
+        className="bottom-toolbar"
+        role="toolbar"
+        aria-label="Ferramentas"
+        data-disabled={toolbarDisabled}
+      >
         {tools.map((tool) => (
           <ToolButton
             key={tool.id}
@@ -285,6 +305,7 @@ export function BottomToolbar() {
                 : (tool.id === "favorite" && Boolean(activeDocument?.favorite)) ||
                   (tool.id === "preview" && visibilityPanelOpen)
             }
+            disabled={toolbarDisabled}
             onSelect={handleSelect}
           />
         ))}
@@ -466,8 +487,10 @@ export function BottomToolbar() {
         variant="warning"
         onCancel={() => setConfirmation(null)}
         onConfirm={() => {
-          recordHistory(documents);
-          clearActivePageElements();
+          if (activePage) {
+            recordHistory(documents);
+            clearActivePageElements();
+          }
           setConfirmation(null);
         }}
       />
@@ -479,8 +502,10 @@ export function BottomToolbar() {
         variant="danger"
         onCancel={() => setConfirmation(null)}
         onConfirm={() => {
-          recordHistory(documents);
-          deletePage(activePageId);
+          if (activePage) {
+            recordHistory(documents);
+            deletePage(activePageId);
+          }
           setConfirmation(null);
         }}
       />

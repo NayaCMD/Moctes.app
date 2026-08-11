@@ -10,6 +10,7 @@ import {
     getPageDropTargetFromPoint,
 } from "../utils/assetDrop.utils";
 import { DEFAULT_SAFE_AREA } from "../utils/coordinates.utils";
+import { getEditableActivePage } from "../utils/document.utils";
 
 const DRAG_START_THRESHOLD = 4;
 
@@ -45,13 +46,17 @@ export function useAssetDrag({ asset, previewSrc, onSelect, onAdded }: UseAssetD
         const editorState = useEditorStore.getState();
         const documentState = useDocumentStore.getState();
         const target = getPageDropTargetFromPoint(clientX, clientY);
-        const page = target
-            ? documentState.documents
-                .flatMap((document) => document.pages)
-                .find((item) => item.id === target.pageId)
-            : null;
+        const document = target
+            ? documentState.documents.find((item) => item.id === target.documentId)
+            : undefined;
+        const page = document
+            ? getEditableActivePage(document, {
+                notebookBook: editorState.notebookBook,
+                notebookTransition: editorState.notebookTransition,
+            })
+            : undefined;
         const validDrop =
-            Boolean(target && page) &&
+            Boolean(target && page && page.id === target.pageId) &&
             editorState.interaction.mode === "idle" &&
             editorState.editingTextElementId === null;
 
@@ -72,10 +77,14 @@ export function useAssetDrag({ asset, previewSrc, onSelect, onAdded }: UseAssetD
             return;
         }
 
-        const page = documentState.documents
-            .flatMap((document) => document.pages)
-            .find((item) => item.id === target.pageId);
-        if (!page) {
+        const document = documentState.documents.find((item) => item.id === target.documentId);
+        const page = document
+            ? getEditableActivePage(document, {
+                notebookBook: editorState.notebookBook,
+                notebookTransition: editorState.notebookTransition,
+            })
+            : undefined;
+        if (!page || page.id !== target.pageId) {
             cancelDrag();
             return;
         }

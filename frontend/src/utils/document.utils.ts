@@ -1,7 +1,10 @@
 import type { Divider, DocumentType, MoctesDocument } from "../types/document.types";
 import type { PageElement } from "../types/element.types";
+import type { NotebookBookState, NotebookTransitionState } from "../types/notebook.types";
 import type { Page } from "../types/page.types";
 import type { PaperType } from "../types/theme.types";
+import { migrateDocumentToSchemaV2 } from "./notebookMigration.utils";
+import { getSurfaceById } from "./notebookSurfaces.utils";
 
 export function createId(prefix: string): string {
   return `${prefix}-${crypto.randomUUID()}`;
@@ -17,6 +20,57 @@ export function getOrderedPages(document: MoctesDocument): Page[] {
 
 export function getActivePage(document: MoctesDocument): Page | undefined {
   return document.pages.find((page) => page.id === document.activePageId);
+}
+
+export function isNotebookPageSurfaceActive(document: MoctesDocument): boolean {
+  if (document.type !== "notebook") {
+    return true;
+  }
+
+  const activeSurface = document.activeSurfaceId
+    ? getSurfaceById(document, document.activeSurfaceId)
+    : undefined;
+
+  return Boolean(
+    activeSurface?.kind === "page" &&
+    document.pages.some((page) => page.id === activeSurface.id),
+  );
+}
+
+interface EditableActivePageOptions {
+  notebookBook?: NotebookBookState | null;
+  notebookTransition?: NotebookTransitionState | null;
+}
+
+export function getEditableActivePage(
+  document: MoctesDocument,
+  options: EditableActivePageOptions = {},
+): Page | undefined {
+  if (document.type !== "notebook") {
+    return getActivePage(document);
+  }
+
+  if (options.notebookTransition?.documentId === document.id) {
+    return undefined;
+  }
+
+  const notebookPhase =
+    options.notebookBook?.documentId === document.id
+      ? options.notebookBook.phase
+      : "closed";
+  if (notebookPhase !== "open") {
+    return undefined;
+  }
+
+  const activeSurface = document.activeSurfaceId
+    ? getSurfaceById(document, document.activeSurfaceId)
+    : undefined;
+
+  if (activeSurface?.kind !== "page") {
+    return undefined;
+  }
+
+  return document.pages.find((page) => page.id === activeSurface.id);
 }
 
 export function createEmptyPage(options: {
@@ -72,7 +126,7 @@ export function createEmptyDocument(type: DocumentType): MoctesDocument {
     title: "Nova página",
   });
 
-  return {
+  const document: MoctesDocument = {
     id: documentId,
     type,
     title:
@@ -94,6 +148,8 @@ export function createEmptyDocument(type: DocumentType): MoctesDocument {
     createdAt,
     updatedAt: createdAt,
   };
+
+  return type === "notebook" ? migrateDocumentToSchemaV2(document) : document;
 }
 
 export function clonePage(page: Page, overrides: Partial<Page> = {}): Page {

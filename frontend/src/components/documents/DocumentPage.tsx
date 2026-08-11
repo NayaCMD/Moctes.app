@@ -255,15 +255,15 @@ export function DocumentPage({
         clearSelection();
       }}
     >
-      {interactive &&
-        visibleElements.map((element) => (
-          <PageElementRenderer
-            key={element.id}
-            element={element}
+      {visibleElements.map((element) => (
+        <PageElementRenderer
+          key={element.id}
+          element={element}
+          interactive={interactive}
           pageElement={pageElement}
-            pageId={page.id}
-          />
-        ))}
+          pageId={page.id}
+        />
+      ))}
       {interactive && selectedElement && pageElement && (
         <SelectionBox element={selectedElement} pageElement={pageElement} />
       )}

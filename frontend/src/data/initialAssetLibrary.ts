@@ -20,7 +20,11 @@ export const defaultLibraryAssets: LibraryAsset[] = sidebarAssets.map((asset) =>
   type: categoryToAssetType(asset.category),
   name: asset.label,
   src: asset.src,
-  mimeType: asset.src.endsWith(".jpg") ? "image/jpeg" : "image/png",
+  mimeType: asset.src.endsWith(".svg")
+    ? "image/svg+xml"
+    : asset.src.endsWith(".jpg")
+      ? "image/jpeg"
+      : "image/png",
   size: 0,
   source: "built-in",
   createdAt,

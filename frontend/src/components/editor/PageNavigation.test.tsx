@@ -1,36 +1,37 @@
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { initialDocuments } from "../../data/initialDocuments";
 import { resetStores } from "../../test/helpers/resetStores";
-import { useAppStore } from "../../stores/useAppStore";
 import { PageNavigation } from "./PageNavigation";
 
 describe("PageNavigation", () => {
   beforeEach(() => resetStores());
 
-  it("mostra o par de paginas do caderno no topo e permite navegar", async () => {
+  it("mostra o numero final do par atual do caderno como contador desabilitado", () => {
     const document = initialDocuments[0];
-    const onSelectPage = vi.fn();
-    render(<PageNavigation document={document} pages={document.pages} onSelectPage={onSelectPage} />);
+    render(<PageNavigation document={document} pages={document.pages} />);
 
-    expect(screen.getByRole("navigation", { name: "Navegação de páginas" })).toBeInTheDocument();
-    expect(screen.getByText("Páginas 1-2 de 2")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Página anterior" })).toBeDisabled();
+    expect(screen.getByLabelText("Página atual")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Próxima página" }));
-    expect(onSelectPage).toHaveBeenCalledWith(document.pages[1].id);
+    const counter = screen.getByRole("button", { name: "Páginas 1 a 2 de 2" });
+    expect(counter).toBeDisabled();
+    expect(counter).toHaveTextContent("2");
+    expect(counter).toHaveAttribute("title", "Páginas 1 a 2 de 2");
   });
 
-  it("oculta e mostra a navegacao por preferencia persistida", async () => {
+  it("mostra a pagina ativa para documentos de pagina unica", () => {
+    const document = initialDocuments[1];
+    render(<PageNavigation document={document} pages={document.pages} />);
+
+    const counter = screen.getByRole("button", { name: "Página 1 de 1" });
+    expect(counter).toBeDisabled();
+    expect(counter).toHaveTextContent("1");
+  });
+
+  it("nao renderiza contador quando nao ha paginas", () => {
     const document = initialDocuments[0];
-    render(<PageNavigation document={document} pages={document.pages} onSelectPage={vi.fn()} />);
+    const { container } = render(<PageNavigation document={document} pages={[]} />);
 
-    await userEvent.click(screen.getByRole("button", { name: "Ocultar navegação de páginas" }));
-    expect(useAppStore.getState().showPageNavigation).toBe(false);
-    expect(screen.getByRole("button", { name: "Mostrar navegação de páginas" })).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: "Mostrar navegação de páginas" }));
-    expect(useAppStore.getState().showPageNavigation).toBe(true);
+    expect(container).toBeEmptyDOMElement();
   });
 });

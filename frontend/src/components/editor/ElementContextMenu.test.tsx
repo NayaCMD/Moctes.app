@@ -9,7 +9,14 @@ import { ElementContextMenu } from "./ElementContextMenu";
 describe("ElementContextMenu", () => {
   beforeEach(() => resetStores());
 
+  function openNotebook() {
+    useEditorStore.setState({
+      notebookBook: { documentId: useDocumentStore.getState().documents[0].id, phase: "open" },
+    });
+  }
+
   it("abre, copia, duplica e fecha", async () => {
+    openNotebook();
     const element = useDocumentStore.getState().documents[0].pages[0].elements[0];
     useEditorStore.getState().openContextMenu(element.id, 20, 20);
     const view = render(<ElementContextMenu />);
@@ -25,6 +32,7 @@ describe("ElementContextMenu", () => {
   });
 
   it("desabilita ações destrutivas quando elemento está bloqueado", () => {
+    openNotebook();
     const element = useDocumentStore.getState().documents[0].pages[0].elements[0];
     useDocumentStore.getState().toggleElementLock(element.id);
     useEditorStore.getState().openContextMenu(element.id, 20, 20);

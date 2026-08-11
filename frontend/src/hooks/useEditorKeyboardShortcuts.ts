@@ -2,27 +2,18 @@ import { useEffect } from "react";
 import { EDITOR_ZOOM_STEP } from "../config/documentGeometry";
 import { useDocumentStore } from "../stores/useDocumentStore";
 import { useEditorStore } from "../stores/useEditorStore";
-import type { MoctesDocument } from "../types/document.types";
 import type { PageElement } from "../types/element.types";
 import { DEFAULT_SAFE_AREA } from "../utils/coordinates.utils";
+import { getEditableActivePage } from "../utils/document.utils";
 import { nudgeBounds } from "../utils/elementBounds.utils";
 import { isEditableTarget, isModKey } from "../utils/keyboard.utils";
 
-function findElement(documents: MoctesDocument[], elementId: string | null): PageElement | null {
+function findPageElement(pageElements: PageElement[], elementId: string | null): PageElement | null {
     if (!elementId) {
         return null;
     }
 
-    for (const document of documents) {
-        for (const page of document.pages) {
-            const element = page.elements.find((item) => item.id === elementId);
-            if (element) {
-                return element;
-            }
-        }
-    }
-
-    return null;
+    return pageElements.find((element) => element.id === elementId) ?? null;
 }
 
 export function useEditorKeyboardShortcuts() {
@@ -30,7 +21,18 @@ export function useEditorKeyboardShortcuts() {
         const handleKeyDown = (event: KeyboardEvent) => {
             const documentState = useDocumentStore.getState();
             const editorState = useEditorStore.getState();
-            const selectedElement = findElement(documentState.documents, documentState.selectedElementId);
+            const activeDocument = documentState.documents.find(
+                (document) => document.id === documentState.activeDocumentId,
+            );
+            const editableActivePage = activeDocument
+                ? getEditableActivePage(activeDocument, {
+                    notebookBook: editorState.notebookBook,
+                    notebookTransition: editorState.notebookTransition,
+                })
+                : undefined;
+            const selectedElement = editableActivePage
+                ? findPageElement(editableActivePage.elements, documentState.selectedElementId)
+                : null;
             const modKey = isModKey(event);
 
             if (isEditableTarget(event.target)) {
@@ -104,10 +106,10 @@ export function useEditorKeyboardShortcuts() {
                 return;
             }
 
-            if (modKey && event.key.toLowerCase() === "v" && editorState.clipboardElement) {
+            if (modKey && event.key.toLowerCase() === "v" && editorState.clipboardElement && editableActivePage) {
                 event.preventDefault();
                 editorState.recordHistory(documentState.documents);
-                const pastedId = documentState.pasteElement(documentState.activePageId, editorState.clipboardElement);
+                const pastedId = documentState.pasteElement(editableActivePage.id, editorState.clipboardElement);
                 editorState.incrementPasteCount();
                 documentState.selectElement(pastedId);
                 return;

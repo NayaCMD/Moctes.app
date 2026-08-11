@@ -5,9 +5,10 @@ import type { PageElement } from "../../types/element.types";
 
 interface TextElementProps {
   element: PageElement;
+  interactive?: boolean;
 }
 
-export function TextElement({ element }: TextElementProps) {
+export function TextElement({ element, interactive = true }: TextElementProps) {
   const documents = useDocumentStore((state) => state.documents);
   const updateElement = useDocumentStore((state) => state.updateElement);
   const editingTextElementId = useEditorStore((state) => state.editingTextElementId);
@@ -15,7 +16,7 @@ export function TextElement({ element }: TextElementProps) {
   const recordHistory = useEditorStore((state) => state.recordHistory);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const isEditing = editingTextElementId === element.id;
+  const isEditing = interactive && editingTextElementId === element.id;
 
   useEffect(() => {
     if (isEditing) {

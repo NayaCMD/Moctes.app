@@ -4,6 +4,7 @@ import type { AssetCategory } from "../types/asset.types";
 import type { MoctesDocument } from "../types/document.types";
 import type { ActiveToolPanel, DrawingToolSettings, EditorMode, RulerState, ZoomMode } from "../types/editor.types";
 import type { DrawingPoint, PageElement, PageElementType } from "../types/element.types";
+import type { NotebookBookState, NotebookTransitionState } from "../types/notebook.types";
 import { cloneDocuments, pushHistorySnapshot } from "../utils/history.utils";
 
 export type EditorInteractionMode = "idle" | "dragging" | "resizing" | "rotating";
@@ -82,6 +83,8 @@ interface EditorStoreState {
   editingTextElementId: string | null;
   editorZoom: number;
   zoomMode: ZoomMode;
+  notebookBook: NotebookBookState | null;
+  notebookTransition: NotebookTransitionState | null;
   setEditorMode: (mode: EditorMode) => void;
   setActiveToolPanel: (panel: ActiveToolPanel) => void;
   beginInteraction: (state: EditorInteractionState) => void;
@@ -109,6 +112,15 @@ interface EditorStoreState {
   setZoomMode: (mode: ZoomMode) => void;
   fitEditorZoom: () => void;
   resetEditorZoom: () => void;
+  openNotebook: (documentId: string) => boolean;
+  completeNotebookOpening: (documentId: string) => void;
+  closeNotebook: (documentId: string) => boolean;
+  completeNotebookClosing: (documentId: string) => void;
+  cancelNotebookBookTransition: (documentId?: string) => void;
+  beginNotebookTransition: (transition: NotebookTransitionState) => boolean;
+  startNotebookTransition: (transition: NotebookTransitionState) => boolean;
+  completeNotebookTransition: (transition: NotebookTransitionState) => void;
+  cancelNotebookTransition: (documentId?: string) => void;
   setDrawingSettings: (settings: Partial<DrawingToolSettings>) => void;
   setRuler: (state: Partial<RulerState>) => void;
   resetEditorSession: () => void;
@@ -173,6 +185,8 @@ export const useEditorStore = create<EditorStoreState>()((set, get) => ({
   editingTextElementId: null,
   editorZoom: 1,
   zoomMode: "fit",
+  notebookBook: null,
+  notebookTransition: null,
   setEditorMode: (editorMode) =>
     set({
       editorMode,
@@ -286,6 +300,113 @@ export const useEditorStore = create<EditorStoreState>()((set, get) => ({
   setZoomMode: (zoomMode) => set({ zoomMode }),
   fitEditorZoom: () => set({ zoomMode: "fit" }),
   resetEditorZoom: () => set({ editorZoom: 1, zoomMode: "manual" }),
+  openNotebook: (documentId) => {
+    const current = get().notebookBook;
+    const phase = current?.documentId === documentId ? current.phase : "closed";
+    if (phase === "opening" || phase === "open" || phase === "closing") {
+      return false;
+    }
+
+    set({
+      notebookBook: { documentId, phase: "opening" },
+      interaction: { mode: "idle", elementId: null, preview: null },
+      transferPreview: null,
+      drawingPreview: null,
+      assetDrag: idleAssetDrag,
+      contextMenu: { open: false, elementId: null, x: 0, y: 0 },
+      editingTextElementId: null,
+    });
+    return true;
+  },
+  completeNotebookOpening: (documentId) =>
+    set((state) => ({
+      notebookBook:
+        state.notebookBook?.documentId === documentId && state.notebookBook.phase === "opening"
+          ? { documentId, phase: "open" }
+          : state.notebookBook,
+    })),
+  closeNotebook: (documentId) => {
+    const current = get().notebookBook;
+    if (current?.documentId !== documentId || current.phase !== "open") {
+      return false;
+    }
+
+    set({
+      notebookBook: { documentId, phase: "closing" },
+      notebookTransition: null,
+      interaction: { mode: "idle", elementId: null, preview: null },
+      transferPreview: null,
+      drawingPreview: null,
+      assetDrag: idleAssetDrag,
+      contextMenu: { open: false, elementId: null, x: 0, y: 0 },
+      editingTextElementId: null,
+    });
+    return true;
+  },
+  completeNotebookClosing: (documentId) =>
+    set((state) => ({
+      notebookBook:
+        state.notebookBook?.documentId === documentId && state.notebookBook.phase === "closing"
+          ? { documentId, phase: "closed" }
+          : state.notebookBook,
+    })),
+  cancelNotebookBookTransition: (documentId) =>
+    set((state) => ({
+      notebookBook:
+        state.notebookBook &&
+        (!documentId || state.notebookBook.documentId === documentId) &&
+        (state.notebookBook.phase === "opening" || state.notebookBook.phase === "closing")
+          ? { documentId: state.notebookBook.documentId, phase: state.notebookBook.phase === "opening" ? "closed" : "open" }
+          : state.notebookBook,
+    })),
+  beginNotebookTransition: (notebookTransition) => {
+    if (get().notebookTransition) {
+      return false;
+    }
+
+    set({
+      notebookTransition,
+      interaction: { mode: "idle", elementId: null, preview: null },
+      transferPreview: null,
+      drawingPreview: null,
+      assetDrag: idleAssetDrag,
+      contextMenu: { open: false, elementId: null, x: 0, y: 0 },
+      editingTextElementId: null,
+    });
+    return true;
+  },
+  startNotebookTransition: (notebookTransition) => {
+    const current = get().notebookTransition;
+    if (
+      !current ||
+      current.documentId !== notebookTransition.documentId ||
+      current.fromSurfaceId !== notebookTransition.fromSurfaceId ||
+      current.toSurfaceId !== notebookTransition.toSurfaceId
+    ) {
+      return false;
+    }
+
+    set({ notebookTransition: { ...current, phase: "running" } });
+    return true;
+  },
+  completeNotebookTransition: (notebookTransition) => {
+    const current = get().notebookTransition;
+    if (
+      current &&
+      current.documentId === notebookTransition.documentId &&
+      current.fromSurfaceId === notebookTransition.fromSurfaceId &&
+      current.toSurfaceId === notebookTransition.toSurfaceId
+    ) {
+      set({ notebookTransition: null });
+    }
+  },
+  cancelNotebookTransition: (documentId) =>
+    set((state) => ({
+      notebookTransition:
+        state.notebookTransition && (!documentId || state.notebookTransition.documentId === documentId)
+          ? null
+          : state.notebookTransition,
+    })),
   setDrawingSettings: (settings) =>
     set((state) => ({ drawingSettings: { ...state.drawingSettings, ...settings } })),
   setRuler: (ruler) => set((state) => ({ ruler: { ...state.ruler, ...ruler } })),
@@ -309,6 +430,8 @@ export const useEditorStore = create<EditorStoreState>()((set, get) => ({
       editingTextElementId: null,
       editorZoom: 1,
       zoomMode: "fit",
+      notebookBook: null,
+      notebookTransition: null,
     }),
 }));
 

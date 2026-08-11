@@ -11,6 +11,7 @@ import {
   MAX_ASSETS_PER_FOLDER,
   MAX_ASSET_FOLDERS,
 } from "../../utils/assetLibrary.utils";
+import { getEditableActivePage } from "../../utils/document.utils";
 import { createElementFromAsset } from "../../utils/element.utils";
 import { placeElementForInsertion } from "../../utils/insertion.utils";
 import { indexedDbAssetStorage } from "../../services/assetStorage/indexedDbAssetStorage";
@@ -33,11 +34,13 @@ export function Sidebar() {
   const sidebarVisible = useAppStore((state) => state.sidebarVisible);
   const setSidebarVisible = useAppStore((state) => state.setSidebarVisible);
   const documents = useDocumentStore((state) => state.documents);
-  const activePageId = useDocumentStore((state) => state.activePageId);
+  const activeDocumentId = useDocumentStore((state) => state.activeDocumentId);
   const addElement = useDocumentStore((state) => state.addElement);
   const updatePage = useDocumentStore((state) => state.updatePage);
   const recordHistory = useEditorStore((state) => state.recordHistory);
   const cancelAssetDrag = useEditorStore((state) => state.cancelAssetDrag);
+  const notebookTransition = useEditorStore((state) => state.notebookTransition);
+  const notebookBook = useEditorStore((state) => state.notebookBook);
   const folders = useAssetLibraryStore((state) => state.folders);
   const assets = useAssetLibraryStore((state) => state.assets);
   const activeFolderId = useAssetLibraryStore((state) => state.activeFolderId);
@@ -65,6 +68,10 @@ export function Sidebar() {
   const [folderPendingDelete, setFolderPendingDelete] = useState<string | null>(null);
   const [assetPendingDelete, setAssetPendingDelete] = useState<LibraryAsset | null>(null);
   const activeFolder = folders.find((folder) => folder.id === activeFolderId) ?? folders[0];
+  const activeDocument = documents.find((document) => document.id === activeDocumentId);
+  const editableActivePage = activeDocument
+    ? getEditableActivePage(activeDocument, { notebookBook, notebookTransition })
+    : undefined;
   const visibleAssets = getFilteredAssets();
   const activeFolderCount = assets.filter((asset) => asset.folderId === activeFolder?.id).length;
   const statusMessage = importError?.message ?? feedbackMessage;
@@ -100,7 +107,7 @@ export function Sidebar() {
   };
 
   const addAssetToPage = (asset: SidebarAsset) => {
-    const page = documents.flatMap((document) => document.pages).find((item) => item.id === activePageId);
+    const page = editableActivePage;
     if (!page) {
       return;
     }
@@ -109,7 +116,7 @@ export function Sidebar() {
       existingElements: page.elements,
     });
     recordHistory(documents);
-    addElement(activePageId, element);
+    addElement(page.id, element);
     showAddedFeedback(asset.id);
   };
 

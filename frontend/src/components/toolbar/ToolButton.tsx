@@ -9,6 +9,7 @@ interface ToolButtonProps {
   icon: LucideIcon;
   tone: string;
   active: boolean;
+  disabled?: boolean;
   onSelect: (tool: EditorTool, anchor: ToolPopoverAnchor, button: HTMLButtonElement) => void;
 }
 
@@ -28,9 +29,13 @@ export function ToolButton({
   icon: Icon,
   tone,
   active,
+  disabled = false,
   onSelect,
 }: ToolButtonProps) {
   const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
+    if (disabled) {
+      return;
+    }
     onSelect(id, getAnchorFromButton(event.currentTarget), event.currentTarget);
   };
 
@@ -43,6 +48,7 @@ export function ToolButton({
       title={label}
       aria-label={label}
       aria-pressed={active}
+      disabled={disabled}
       onClick={handleClick}
     >
       <Icon size={20} strokeWidth={2} />

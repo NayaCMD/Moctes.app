@@ -109,10 +109,12 @@ export function DocumentWorkspace() {
         </div>
 
         <div className="document-status-controls">
-          <PageNavigation
-            document={activeDocument}
-            pages={activePages}
-          />
+          {activeDocument.type !== "notebook" && (
+            <PageNavigation
+              document={activeDocument}
+              pages={activePages}
+            />
+          )}
 
           <EditorZoomControls
             scale={scale}

@@ -1,0 +1,51 @@
+.notebook-divider-surface {
+    position: relative;
+
+    display: flex;
+    width: var(--book-page-width);
+    height: var(--book-page-height);
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+
+    border: 1px solid rgba(81, 96, 116, 0.16);
+    border-radius: 6px 15px 15px 6px;
+
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.03)),
+        var(--divider-color, #d9f4f7);
+
+    color: var(--divider-text-color, #26324a);
+    box-shadow:
+        inset 8px 0 18px rgba(112, 103, 92, 0.04),
+        0 6px 10px rgba(70, 75, 80, 0.1);
+}
+
+.notebook-divider-content {
+    display: grid;
+    gap: 12px;
+    justify-items: center;
+    max-width: 72%;
+    text-align: center;
+}
+
+.notebook-divider-kicker {
+    color: color-mix(in srgb, var(--divider-text-color, #26324a) 68%, transparent);
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
+.notebook-divider-content h2 {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-size: 30px;
+    line-height: 1.08;
+}
+
+.notebook-divider-content p {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 800;
+}

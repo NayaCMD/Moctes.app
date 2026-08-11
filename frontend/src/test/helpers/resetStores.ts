@@ -75,6 +75,8 @@ export function resetStores() {
         editingTextElementId: null,
         editorZoom: 1,
         zoomMode: "fit",
+        notebookBook: null,
+        notebookTransition: null,
     });
 
     const assetState = useAssetLibraryStore.getInitialState();

@@ -10,6 +10,12 @@ import { Sidebar } from "./Sidebar";
 describe("Sidebar", () => {
   beforeEach(() => resetStores());
 
+  function openNotebook() {
+    useEditorStore.setState({
+      notebookBook: { documentId: useDocumentStore.getState().documents[0].id, phase: "open" },
+    });
+  }
+
   it("renderiza sidebar simples com quatro secoes e biblioteca avancada fechada", () => {
     render(<Sidebar />);
 
@@ -48,6 +54,7 @@ describe("Sidebar", () => {
   });
 
   it("seleciona asset e adiciona por duplo clique", async () => {
+    openNotebook();
     render(<Sidebar />);
     const before = useDocumentStore.getState().documents[0].pages[0].elements.length;
 
@@ -63,7 +70,46 @@ describe("Sidebar", () => {
     expect(screen.getByText("Asset adicionado a pagina.")).toBeInTheDocument();
   });
 
+  it("nao adiciona asset quando a divisoria do caderno esta aberta", async () => {
+    openNotebook();
+    const document = useDocumentStore.getState().documents[0];
+    const section = document.sections?.[0];
+    if (!section) {
+      throw new Error("Section not found");
+    }
+    useDocumentStore.getState().goToSection(section.id, document.id);
+    render(<Sidebar />);
+    const before = useDocumentStore.getState().documents[0].pages[0].elements.length;
+
+    await userEvent.dblClick(screen.getByRole("button", { name: "Selecionar Cartela Moctes" }));
+
+    expect(useDocumentStore.getState().documents[0].pages[0].elements).toHaveLength(before);
+    expect(useEditorStore.getState().undoStack).toHaveLength(0);
+  });
+
+  it("nao adiciona asset por duplo clique durante a transicao do caderno", async () => {
+    openNotebook();
+    const document = useDocumentStore.getState().documents[0];
+    const page = document.pages[0];
+    useDocumentStore.getState().goToPage(page.id, document.id);
+    useEditorStore.getState().beginNotebookTransition({
+      documentId: document.id,
+      fromSurfaceId: page.id,
+      toSurfaceId: document.pages[1].id,
+      direction: "forward",
+      phase: "running",
+    });
+    render(<Sidebar />);
+    const before = useDocumentStore.getState().documents[0].pages[0].elements.length;
+
+    await userEvent.dblClick(screen.getByRole("button", { name: "Selecionar Cartela Moctes" }));
+
+    expect(useDocumentStore.getState().documents[0].pages[0].elements).toHaveLength(before);
+    expect(useEditorStore.getState().undoStack).toHaveLength(0);
+  });
+
   it("Enter na miniatura adiciona uma unica vez", async () => {
+    openNotebook();
     render(<Sidebar />);
     const thumbnail = screen.getByRole("button", { name: "Selecionar Tape azul" });
     const before = useDocumentStore.getState().documents[0].pages[0].elements.length;
@@ -108,6 +154,7 @@ describe("Sidebar", () => {
   });
 
   it("drag valido cria um asset exatamente na pagina alvo", () => {
+    openNotebook();
     render(<Sidebar />);
     const thumbnail = screen.getByRole("button", { name: "Selecionar Cartela Moctes" });
     const state = useDocumentStore.getState();
@@ -128,6 +175,36 @@ describe("Sidebar", () => {
     expect(elements.at(-1)).toMatchObject({ type: "sticker" });
     expect(useDocumentStore.getState().selectedElementId).toBe(elements.at(-1)?.id);
     expect(useEditorStore.getState().undoStack).toHaveLength(1);
+    expect(useEditorStore.getState().assetDrag.status).toBe("idle");
+  });
+
+  it("drop valido nao insere asset durante a transicao do caderno", () => {
+    openNotebook();
+    render(<Sidebar />);
+    const state = useDocumentStore.getState();
+    const page = state.documents[0].pages[0];
+    const thumbnail = screen.getByRole("button", { name: "Selecionar Cartela Moctes" });
+    const pageElement = document.createElement("section");
+    pageElement.dataset.pageId = page.id;
+    pageElement.dataset.documentId = state.activeDocumentId;
+    pageElement.getBoundingClientRect = () =>
+      ({ left: 100, top: 50, width: 400, height: 500, right: 500, bottom: 550 }) as DOMRect;
+    vi.spyOn(document, "elementFromPoint").mockReturnValue(pageElement);
+    useEditorStore.getState().beginNotebookTransition({
+      documentId: state.documents[0].id,
+      fromSurfaceId: page.id,
+      toSurfaceId: state.documents[0].pages[1].id,
+      direction: "forward",
+      phase: "running",
+    });
+    const before = page.elements.length;
+
+    fireEvent.pointerDown(thumbnail, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
+    fireEvent.pointerMove(window, { pointerId: 1, clientX: 280, clientY: 260 });
+    fireEvent.pointerUp(window, { pointerId: 1, clientX: 280, clientY: 260 });
+
+    expect(useDocumentStore.getState().documents[0].pages[0].elements).toHaveLength(before);
+    expect(useEditorStore.getState().undoStack).toHaveLength(0);
     expect(useEditorStore.getState().assetDrag.status).toBe("idle");
   });
 

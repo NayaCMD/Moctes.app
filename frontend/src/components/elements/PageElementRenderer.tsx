@@ -14,17 +14,28 @@ interface PageElementRendererProps {
   element: PageElement;
   pageId: string;
   pageElement: HTMLElement | null;
+  interactive?: boolean;
 }
 
-export function PageElementRenderer({ element, pageId, pageElement }: PageElementRendererProps) {
+export function PageElementRenderer({
+  element,
+  pageId,
+  pageElement,
+  interactive = true,
+}: PageElementRendererProps) {
   return (
-    <ElementFrame element={element} pageId={pageId} pageElement={pageElement}>
-      {element.type === "text" && <TextElement element={element} />}
+    <ElementFrame
+      element={element}
+      pageId={pageId}
+      pageElement={pageElement}
+      interactive={interactive}
+    >
+      {element.type === "text" && <TextElement element={element} interactive={interactive} />}
       {element.type === "emoji" && <EmojiElement element={element} />}
       {element.type === "image" && <ImageElement element={element} />}
       {element.type === "sticker" && <StickerElement element={element} />}
       {element.type === "tape" && <TapeElement element={element} />}
-      {element.type === "post-it" && <PostItElement element={element} />}
+      {element.type === "post-it" && <PostItElement element={element} interactive={interactive} />}
       {element.type === "shape" && <ShapeElement element={element} />}
       {element.type === "comment" && <CommentElement element={element} />}
       {element.type === "drawing" && <DrawingElement element={element} />}

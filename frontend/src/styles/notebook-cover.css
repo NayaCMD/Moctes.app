@@ -1,0 +1,325 @@
+.notebook-view-v2 {
+    --notebook-z-cover: 0;
+    --notebook-z-tabs: 5;
+    --notebook-z-surface: 3;
+    --notebook-z-binding: 8;
+    --notebook-z-navigation: 10;
+
+    --book-page-width: 312px;
+    --book-page-height: 430px;
+    --book-spine-width: 18px;
+    --book-cover-overhang-x: 10px;
+    --book-cover-overhang-y: 10px;
+    --book-closed-back-offset: 8px;
+    --book-ring-outset: 42px;
+    --book-ring-width: 58px;
+    --book-ring-height: 30px;
+    --book-tab-height: 24px;
+    --book-tab-row-height: 34px;
+    --book-tab-width: 106px;
+    --book-elastic-width: 18px;
+    --book-bottom-gap: 50px;
+    --book-cover-radius: var(--notebook-cover-radius, 24px);
+    --book-open-duration: 620ms;
+
+    --notebook-page-width: var(--book-page-width);
+    --notebook-page-height: var(--book-page-height);
+    --notebook-surface-width: var(--book-page-width);
+    --notebook-surface-height: var(--book-page-height);
+    --notebook-spine-width: var(--book-spine-width);
+    --notebook-cover-padding: var(--book-cover-overhang-x);
+    --notebook-navigation-height: 34px;
+    --notebook-tab-overhang: 0px;
+    --notebook-open-duration: var(--book-open-duration);
+
+    --book-open-width: calc(
+        (var(--book-page-width) * 2) + var(--book-spine-width) +
+        (var(--book-cover-overhang-x) * 2)
+    );
+    --book-closed-width: calc(
+        var(--book-ring-outset) + var(--book-spine-width) + var(--book-page-width) +
+        (var(--book-cover-overhang-x) * 2) + var(--book-closed-back-offset)
+    );
+    --book-frame-height: calc(
+        var(--book-tab-row-height) + var(--book-page-height) +
+        (var(--book-cover-overhang-y) * 2) + var(--book-bottom-gap)
+    );
+
+    display: grid;
+    width: 100%;
+    height: 100%;
+    place-items: center;
+    isolation: isolate;
+}
+
+.notebook-shell {
+    position: relative;
+    isolation: isolate;
+
+    width: var(--book-open-width);
+    height: var(--book-frame-height);
+    overflow: visible;
+
+    background: transparent;
+}
+
+.notebook-shell[data-book-phase="closed"],
+.notebook-shell[data-book-phase="opening"],
+.notebook-shell[data-book-phase="closing"] {
+    width: var(--book-closed-width);
+}
+
+.notebook-spread-spine .binding-rings[data-orientation="vertical"] {
+    position: relative;
+    display: flex;
+    width: var(--book-ring-width);
+    height: 94%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-around;
+    overflow: visible;
+}
+
+.notebook-spread-spine .binding-rings[data-orientation="horizontal"] {
+    display: flex;
+    width: 92%;
+    align-items: center;
+    justify-content: space-around;
+    overflow: visible;
+}
+
+.notebook-spread-spine .binding-ring {
+    position: relative;
+    display: block;
+    width: var(--book-ring-width);
+    height: var(--book-ring-height);
+    overflow: visible;
+}
+
+.notebook-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--book-ring-width);
+    height: var(--book-ring-height);
+    overflow: visible;
+    transform: translate(-50%, -50%);
+}
+
+.notebook-ring[data-mode="open"] {
+    width: calc(var(--book-ring-width) + 8px);
+}
+
+.notebook-shell[data-book-phase="closed"] .notebook-ring,
+.notebook-shell[data-book-phase="opening"] .notebook-ring,
+.notebook-shell[data-book-phase="closing"] .notebook-ring {
+    transform: translate(calc(-50% - 13px), -50%);
+}
+
+.notebook-ring__shadow {
+    fill: none;
+    stroke: rgba(76, 70, 64, 0.28);
+    stroke-linecap: round;
+    stroke-width: 11;
+    transform: translateY(2px);
+}
+
+.notebook-ring__body {
+    filter: drop-shadow(0 1px 1px rgba(67, 61, 55, 0.22));
+}
+
+.notebook-ring__highlight {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.86);
+    stroke-linecap: round;
+    stroke-width: 3;
+}
+
+.notebook-ring__gap {
+    fill: none;
+    stroke: rgba(118, 113, 107, 0.66);
+    stroke-linecap: round;
+    stroke-width: 3;
+}
+
+.notebook-cover {
+    position: absolute;
+    z-index: var(--notebook-z-cover);
+
+    border: 1px solid color-mix(in srgb, var(--notebook-cover-border-color, #8dcbd7) 72%, #6b96a0);
+    border-radius: var(--book-cover-radius);
+
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.06) 52%, rgba(58, 111, 123, 0.08)),
+        color-mix(in srgb, var(--notebook-cover-color, #bde4eb) 94%, white);
+
+    box-shadow:
+        0 13px 22px rgba(70, 82, 92, 0.13),
+        inset 0 0 0 3px rgba(255, 255, 255, 0.18);
+
+    pointer-events: none;
+}
+
+.notebook-shell[data-book-phase="open"] .notebook-cover {
+    top: var(--book-tab-row-height);
+    left: 0;
+    width: var(--book-open-width);
+    height: calc(var(--book-page-height) + (var(--book-cover-overhang-y) * 2));
+}
+
+.notebook-shell:not([data-book-phase="open"]) .notebook-cover {
+    top: calc(var(--book-tab-row-height) + var(--book-closed-back-offset));
+    left: calc(
+        var(--book-ring-outset) + var(--book-spine-width) -
+        var(--book-cover-overhang-x) - var(--book-closed-back-offset)
+    );
+    width: calc(var(--book-page-width) + (var(--book-cover-overhang-x) * 2));
+    height: calc(var(--book-page-height) + (var(--book-cover-overhang-y) * 2));
+}
+
+.notebook-front-cover {
+    position: absolute;
+    top: var(--book-tab-row-height);
+    left: calc(var(--book-ring-outset) + var(--book-spine-width) - var(--book-cover-overhang-x));
+    z-index: 9;
+
+    width: calc(var(--book-page-width) + (var(--book-cover-overhang-x) * 2));
+    height: calc(var(--book-page-height) + (var(--book-cover-overhang-y) * 2));
+    padding: 0;
+
+    border: 0;
+    border-radius: var(--book-cover-radius);
+
+    background: transparent;
+    cursor: pointer;
+    transform: rotateY(0deg);
+    transform-origin: left center;
+    transform-style: preserve-3d;
+    transition: transform var(--book-open-duration) cubic-bezier(0.65, 0, 0.22, 1);
+}
+
+.notebook-front-cover:disabled {
+    cursor: default;
+}
+
+.notebook-front-cover:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 5px;
+}
+
+.notebook-front-cover[data-phase="opening"],
+.notebook-front-cover[data-phase="open"] {
+    pointer-events: none;
+    transform: rotateY(-180deg);
+}
+
+.notebook-front-cover[data-phase="open"] {
+    visibility: hidden;
+}
+
+.notebook-front-cover[data-phase="closing"] {
+    pointer-events: none;
+    transform: rotateY(0deg);
+}
+
+.notebook-front-cover__face {
+    position: absolute;
+    inset: 0;
+
+    display: block;
+    overflow: hidden;
+
+    border: 1px solid color-mix(in srgb, var(--notebook-cover-border-color, #8dcbd7) 76%, #6f99a2);
+    border-radius: var(--book-cover-radius);
+
+    background:
+        radial-gradient(circle at 28% 18%, rgba(255, 255, 255, 0.18), transparent 28%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.04) 46%, rgba(48, 102, 116, 0.08)),
+        color-mix(in srgb, var(--notebook-cover-color, #bde4eb) 95%, white);
+
+    box-shadow:
+        0 13px 22px rgba(70, 82, 92, 0.15),
+        inset 0 0 0 3px rgba(255, 255, 255, 0.16);
+
+    backface-visibility: hidden;
+}
+
+.notebook-front-cover__face::after {
+    content: "";
+    position: absolute;
+    inset: 18px;
+    border: 2px dashed color-mix(in srgb, var(--notebook-cover-border-color, #8dcbd7) 62%, #496d78);
+    border-radius: calc(var(--book-cover-radius) - 8px);
+    opacity: 0.72;
+    pointer-events: none;
+}
+
+.notebook-front-cover__back {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.1)),
+        color-mix(in srgb, var(--notebook-cover-color, #bde4eb) 46%, white);
+    transform: rotateY(180deg);
+}
+
+.notebook-front-cover__elastic {
+    position: absolute;
+    top: -2px;
+    right: 30px;
+    bottom: -2px;
+    width: var(--book-elastic-width);
+    border-inline: 1px solid rgba(92, 139, 150, 0.3);
+    background:
+        linear-gradient(90deg, transparent 0 18%, rgba(255, 255, 255, 0.46) 18% 30%, transparent 30% 42%, rgba(255, 255, 255, 0.42) 42% 58%, transparent 58% 70%, rgba(255, 255, 255, 0.38) 70% 82%, transparent 82%),
+        rgba(220, 249, 255, 0.48);
+    box-shadow:
+        inset 3px 0 5px rgba(59, 119, 132, 0.08),
+        inset -3px 0 5px rgba(59, 119, 132, 0.08);
+}
+
+.notebook-front-cover__clasp {
+    position: absolute;
+    right: 19px;
+    top: 66%;
+    width: 25px;
+    height: 25px;
+    border: 4px solid rgba(255, 255, 255, 0.88);
+    border-right-color: transparent;
+    border-radius: 999px;
+    filter: drop-shadow(0 1px 2px rgba(76, 118, 128, 0.32));
+}
+
+.notebook-close-button {
+    position: absolute;
+    top: calc(var(--book-tab-row-height) + var(--book-page-height) + (var(--book-cover-overhang-y) * 2) + 9px);
+    right: calc(var(--book-cover-overhang-x) + 4px);
+    z-index: var(--notebook-z-navigation);
+
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+
+    border: 1px solid color-mix(in srgb, var(--app-border) 76%, transparent);
+    border-radius: 999px;
+
+    background: color-mix(in srgb, var(--app-surface) 88%, white);
+    color: var(--ink);
+    box-shadow: 0 6px 12px rgba(68, 86, 105, 0.12);
+    cursor: pointer;
+}
+
+.notebook-close-button:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.notebook-book-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
