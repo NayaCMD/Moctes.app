@@ -1,13 +1,16 @@
 import type { Page } from "./page.types";
 
-export const NOTEBOOK_SCHEMA_VERSION = 2;
+export const NOTEBOOK_SCHEMA_VERSION = 3;
 
 export type NotebookBinding = "left" | "top";
+export type NotebookMaterial = "smooth" | "linen" | "speckled";
 
 export interface NotebookCover {
   color: string;
   borderColor: string;
   cornerRadius: number;
+  material?: NotebookMaterial;
+  textureIntensity?: number;
 }
 
 export interface NotebookDivider {
@@ -16,13 +19,14 @@ export interface NotebookDivider {
   tabColor: string;
   textColor: string;
   tabPosition: number;
+  material?: NotebookMaterial;
+  textureIntensity?: number;
 }
 
 export interface NotebookSection {
   id: string;
   title: string;
   divider: NotebookDivider;
-  pages: Page[];
 }
 
 export interface AddNotebookSectionOptions {
@@ -42,7 +46,10 @@ export type RemoveSectionStrategy =
     };
 
 export type NotebookDividerUpdate = Partial<
-  Pick<NotebookDivider, "color" | "tabColor" | "textColor" | "tabPosition">
+  Pick<
+    NotebookDivider,
+    "color" | "tabColor" | "textColor" | "tabPosition" | "material" | "textureIntensity"
+  >
 > & {
   title?: string;
 };

@@ -29,6 +29,6 @@ export const defaultLibraryAssets: LibraryAsset[] = sidebarAssets.map((asset) =>
   source: "built-in",
   createdAt,
   updatedAt: createdAt,
-  width: undefined,
-  height: undefined,
+  width: asset.width,
+  height: asset.height,
 }));

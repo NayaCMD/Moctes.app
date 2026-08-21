@@ -14,7 +14,13 @@ export const MAX_ASSET_FILE_SIZE = 5 * 1024 * 1024;
 export const DEFAULT_ASSET_FOLDER_ID = "folder-default-assets";
 export const IMPORTED_ASSET_SRC_PREFIX = "asset://";
 
-export const allowedAssetMimeTypes = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"] as const;
+export const allowedAssetMimeTypes = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+  "image/svg+xml",
+] as const;
 const allowedExtensions = [".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"];
 
 export function assetTypeToCategory(type: AssetType): AssetCategory {
@@ -49,10 +55,15 @@ export function libraryAssetToSidebarAsset(asset: LibraryAsset): SidebarAsset {
     category: assetTypeToCategory(asset.type),
     type: asset.type,
     label: asset.name,
-    src: asset.source === "imported" ? `${IMPORTED_ASSET_SRC_PREFIX}${asset.id}` : asset.src,
+    src:
+      asset.source === "built-in"
+        ? asset.src
+        : `${IMPORTED_ASSET_SRC_PREFIX}${asset.id}`,
     source: asset.source,
     mimeType: asset.mimeType,
     size: asset.size,
+    width: asset.width,
+    height: asset.height,
   };
 }
 
@@ -68,8 +79,10 @@ export function filterLibraryAssets(options: {
 }): LibraryAsset[] {
   const normalizedQuery = normalizeSearchQuery(options.query);
   return options.assets.filter((asset) => {
-    const folderMatches = !options.folderId || asset.folderId === options.folderId;
-    const typeMatches = options.typeFilter === "all" || asset.type === options.typeFilter;
+    const folderMatches =
+      !options.folderId || asset.folderId === options.folderId;
+    const typeMatches =
+      options.typeFilter === "all" || asset.type === options.typeFilter;
     const queryMatches =
       normalizedQuery.length === 0 ||
       asset.name.toLowerCase().includes(normalizedQuery) ||
@@ -80,7 +93,12 @@ export function filterLibraryAssets(options: {
 
 export function validateAssetFile(file: File): AssetLibraryError | null {
   const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
-  if (!allowedAssetMimeTypes.includes(file.type as (typeof allowedAssetMimeTypes)[number]) || !allowedExtensions.includes(extension)) {
+  if (
+    !allowedAssetMimeTypes.includes(
+      file.type as (typeof allowedAssetMimeTypes)[number],
+    ) ||
+    !allowedExtensions.includes(extension)
+  ) {
     return {
       code: "INVALID_FILE_TYPE",
       message: "Use PNG, JPEG, WEBP, GIF ou SVG seguro.",
@@ -97,7 +115,10 @@ export function validateAssetFile(file: File): AssetLibraryError | null {
   return null;
 }
 
-export function findAssetReferences(documents: MoctesDocument[], assetId: string): Array<{
+export function findAssetReferences(
+  documents: MoctesDocument[],
+  assetId: string,
+): Array<{
   documentId: string;
   pageId: string;
   elementId: string;
@@ -105,8 +126,15 @@ export function findAssetReferences(documents: MoctesDocument[], assetId: string
   return documents.flatMap((document) =>
     document.pages.flatMap((page) =>
       page.elements
-        .filter((element) => "assetId" in element.content && element.content.assetId === assetId)
-        .map((element) => ({ documentId: document.id, pageId: page.id, elementId: element.id })),
+        .filter(
+          (element) =>
+            "assetId" in element.content && element.content.assetId === assetId,
+        )
+        .map((element) => ({
+          documentId: document.id,
+          pageId: page.id,
+          elementId: element.id,
+        })),
     ),
   );
 }

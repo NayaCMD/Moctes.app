@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useDocumentStore } from "../../stores/useDocumentStore";
@@ -18,6 +18,7 @@ describe("ElementContextMenu", () => {
   it("abre, copia, duplica e fecha", async () => {
     openNotebook();
     const element = useDocumentStore.getState().documents[0].pages[0].elements[0];
+    useDocumentStore.getState().selectElement(element.id);
     useEditorStore.getState().openContextMenu(element.id, 20, 20);
     const view = render(<ElementContextMenu />);
 
@@ -35,6 +36,7 @@ describe("ElementContextMenu", () => {
     openNotebook();
     const element = useDocumentStore.getState().documents[0].pages[0].elements[0];
     useDocumentStore.getState().toggleElementLock(element.id);
+    useDocumentStore.getState().selectElement(element.id);
     useEditorStore.getState().openContextMenu(element.id, 20, 20);
 
     render(<ElementContextMenu />);
@@ -42,5 +44,39 @@ describe("ElementContextMenu", () => {
     expect(screen.getByRole("menuitem", { name: /Duplicar/ })).toBeDisabled();
     expect(screen.getByRole("menuitem", { name: /Excluir/ })).toBeDisabled();
     expect(screen.getByRole("menuitem", { name: /Copiar/ })).toBeEnabled();
+  });
+
+  it("isola os eventos do menu e não os propaga para o editor", async () => {
+    openNotebook();
+    const element = useDocumentStore.getState().documents[0].pages[0].elements[0];
+    const handlePointerDown = vi.fn();
+    const handleClick = vi.fn();
+    useDocumentStore.getState().selectElement(element.id);
+    useEditorStore.getState().openContextMenu(element.id, 20, 20);
+
+    render(
+      <div onPointerDown={handlePointerDown} onClick={handleClick}>
+        <ElementContextMenu />
+      </div>,
+    );
+    await userEvent.click(screen.getByRole("menuitem", { name: /Copiar/ }));
+
+    expect(handlePointerDown).not.toHaveBeenCalled();
+    expect(handleClick).not.toHaveBeenCalled();
+    expect(useDocumentStore.getState().selectedElementId).toBe(element.id);
+  });
+
+  it("fecha o menu quando a seleção muda", () => {
+    openNotebook();
+    const elements = useDocumentStore.getState().documents[0].pages[0].elements;
+    useDocumentStore.getState().selectElement(elements[0].id);
+    useEditorStore.getState().openContextMenu(elements[0].id, 20, 20);
+    const view = render(<ElementContextMenu />);
+
+    useDocumentStore.getState().selectElement(elements[1].id);
+    view.rerender(<ElementContextMenu />);
+
+    expect(useEditorStore.getState().contextMenu.open).toBe(false);
+    expect(screen.queryByRole("menu", { name: "Menu do elemento" })).not.toBeInTheDocument();
   });
 });

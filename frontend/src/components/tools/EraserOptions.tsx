@@ -15,10 +15,10 @@ export function EraserOptions({ onEraseMode, onEraseAreaMode, onClearPage, onDel
         Apagar por area
       </button>
       <button type="button" role="menuitem" onClick={onClearPage}>
-        Limpar pagina
+        Limpar página
       </button>
       <button type="button" role="menuitem" onClick={onDeletePage}>
-        Excluir pagina
+        Excluir página
       </button>
     </div>
   );

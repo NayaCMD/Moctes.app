@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 import { EDITOR_ZOOM_STEP } from "../config/documentGeometry";
+import { capabilitiesForRole } from "./useWorkspaceCapabilities";
+import { useAuthStore } from "../stores/useAuthStore";
 import { useDocumentStore } from "../stores/useDocumentStore";
 import { useEditorStore } from "../stores/useEditorStore";
 import type { PageElement } from "../types/element.types";
@@ -34,6 +36,11 @@ export function useEditorKeyboardShortcuts() {
                 ? findPageElement(editableActivePage.elements, documentState.selectedElementId)
                 : null;
             const modKey = isModKey(event);
+            const authState = useAuthStore.getState();
+            const activeRole = authState.workspaces.find(
+                (workspace) => workspace.id === authState.activeWorkspaceId,
+            )?.role;
+            const { canEdit } = capabilitiesForRole(activeRole);
 
             if (isEditableTarget(event.target)) {
                 if (event.key === "Escape") {
@@ -55,6 +62,9 @@ export function useEditorKeyboardShortcuts() {
             }
 
             if (modKey && event.key.toLowerCase() === "z") {
+                if (!canEdit) {
+                    return;
+                }
                 event.preventDefault();
                 const next = event.shiftKey
                     ? editorState.redo(documentState.documents)
@@ -66,6 +76,9 @@ export function useEditorKeyboardShortcuts() {
             }
 
             if (modKey && event.key.toLowerCase() === "y") {
+                if (!canEdit) {
+                    return;
+                }
                 event.preventDefault();
                 const next = editorState.redo(documentState.documents);
                 if (next) {
@@ -99,16 +112,20 @@ export function useEditorKeyboardShortcuts() {
             }
 
             if (modKey && event.key.toLowerCase() === "x" && selectedElement && !selectedElement.locked) {
+                if (!canEdit) {
+                    return;
+                }
                 event.preventDefault();
-                editorState.recordHistory(documentState.documents);
                 editorState.setClipboardElement(selectedElement);
                 documentState.deleteElement(selectedElement.id);
                 return;
             }
 
             if (modKey && event.key.toLowerCase() === "v" && editorState.clipboardElement && editableActivePage) {
+                if (!canEdit) {
+                    return;
+                }
                 event.preventDefault();
-                editorState.recordHistory(documentState.documents);
                 const pastedId = documentState.pasteElement(editableActivePage.id, editorState.clipboardElement);
                 editorState.incrementPasteCount();
                 documentState.selectElement(pastedId);
@@ -116,21 +133,26 @@ export function useEditorKeyboardShortcuts() {
             }
 
             if (modKey && event.key.toLowerCase() === "d" && selectedElement && !selectedElement.locked) {
+                if (!canEdit) {
+                    return;
+                }
                 event.preventDefault();
-                editorState.recordHistory(documentState.documents);
                 documentState.duplicateElement(selectedElement.id);
                 return;
             }
 
             if ((event.key === "Delete" || event.key === "Backspace") && selectedElement && !selectedElement.locked) {
+                if (!canEdit) {
+                    return;
+                }
                 event.preventDefault();
-                editorState.recordHistory(documentState.documents);
                 documentState.deleteElement(selectedElement.id);
                 return;
             }
 
             if (
                 selectedElement &&
+                canEdit &&
                 !selectedElement.locked &&
                 ["ArrowUp", "ArrowRight", "ArrowDown", "ArrowLeft"].includes(event.key)
             ) {
@@ -138,7 +160,6 @@ export function useEditorKeyboardShortcuts() {
                 const step = event.shiftKey ? 2 : 0.5;
                 const dx = event.key === "ArrowLeft" ? -step : event.key === "ArrowRight" ? step : 0;
                 const dy = event.key === "ArrowUp" ? -step : event.key === "ArrowDown" ? step : 0;
-                editorState.recordHistory(documentState.documents);
                 documentState.updateElement(
                     selectedElement.id,
                     nudgeBounds(selectedElement, dx, dy, DEFAULT_SAFE_AREA, selectedElement.rotation),

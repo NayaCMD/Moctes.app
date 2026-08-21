@@ -1,9 +1,26 @@
-import { Copy, EyeOff, Layers, Lock, Scissors, Trash2, Unlock } from "lucide-react";
-import { useEffect, useLayoutEffect } from "react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronsDown,
+  ChevronsUp,
+  Copy,
+  EyeOff,
+  Lock,
+  Scissors,
+  Trash2,
+  Unlock,
+} from "lucide-react";
+import {
+  useEffect,
+  useLayoutEffect,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type SyntheticEvent,
+} from "react";
+import { createPortal } from "react-dom";
+import { useClickOutside } from "../../hooks/useClickOutside";
 import { useDocumentStore } from "../../stores/useDocumentStore";
 import { useEditorStore } from "../../stores/useEditorStore";
 import type { PageElement } from "../../types/element.types";
-import { useClickOutside } from "../../hooks/useClickOutside";
 import { getEditableActivePage } from "../../utils/document.utils";
 
 function findElement(elements: PageElement[], elementId: string | null): PageElement | null {
@@ -13,6 +30,7 @@ function findElement(elements: PageElement[], elementId: string | null): PageEle
 export function ElementContextMenu() {
   const documents = useDocumentStore((state) => state.documents);
   const activeDocumentId = useDocumentStore((state) => state.activeDocumentId);
+  const selectedElementId = useDocumentStore((state) => state.selectedElementId);
   const duplicateElement = useDocumentStore((state) => state.duplicateElement);
   const deleteElement = useDocumentStore((state) => state.deleteElement);
   const pasteElement = useDocumentStore((state) => state.pasteElement);
@@ -29,7 +47,6 @@ export function ElementContextMenu() {
   const clipboardElement = useEditorStore((state) => state.clipboardElement);
   const setClipboardElement = useEditorStore((state) => state.setClipboardElement);
   const incrementPasteCount = useEditorStore((state) => state.incrementPasteCount);
-  const recordHistory = useEditorStore((state) => state.recordHistory);
   const notebookTransition = useEditorStore((state) => state.notebookTransition);
   const notebookBook = useEditorStore((state) => state.notebookBook);
   const menuRef = useClickOutside<HTMLDivElement>(() => closeContextMenu(), contextMenu.open);
@@ -40,13 +57,15 @@ export function ElementContextMenu() {
   const element = findElement(activePage?.elements ?? [], contextMenu.elementId);
 
   useEffect(() => {
-    if (!contextMenu.open) {
-      return undefined;
-    }
+    if (!contextMenu.open) return undefined;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        event.preventDefault();
         closeContextMenu();
+        document
+          .querySelector<HTMLButtonElement>("[aria-controls='element-context-menu']")
+          ?.focus({ preventScroll: true });
       }
     };
 
@@ -54,34 +73,78 @@ export function ElementContextMenu() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [closeContextMenu, contextMenu.open]);
 
-  useLayoutEffect(() => {
-    if (!contextMenu.open || !menuRef.current) {
-      return;
+  useEffect(() => {
+    if (contextMenu.open && contextMenu.elementId !== selectedElementId) {
+      closeContextMenu();
     }
+  }, [closeContextMenu, contextMenu.elementId, contextMenu.open, selectedElementId]);
 
+  useEffect(() => {
+    if (!contextMenu.open) return;
+    menuRef.current
+      ?.querySelector<HTMLButtonElement>("button:not(:disabled)")
+      ?.focus({ preventScroll: true });
+  }, [contextMenu.elementId, contextMenu.open, menuRef]);
+
+  useLayoutEffect(() => {
+    if (!contextMenu.open || !menuRef.current) return;
     const rect = menuRef.current.getBoundingClientRect();
     repositionContextMenu(rect.width, rect.height);
   }, [contextMenu.open, menuRef, repositionContextMenu]);
 
-  if (!contextMenu.open || !element) {
-    return null;
-  }
+  if (!contextMenu.open || !element) return null;
 
-  const run = (action: () => void, shouldRecord = true) => {
-    if (shouldRecord) {
-      recordHistory(documents);
-    }
+  const run = (action: () => void) => {
     action();
     closeContextMenu();
   };
 
-  return (
+  const stopEditorEvent = (event: SyntheticEvent) => {
+    event.stopPropagation();
+  };
+
+  const handleMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const items = Array.from(
+      menuRef.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? [],
+    );
+    if (items.length === 0) return;
+
+    const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement);
+    const nextIndex =
+      event.key === "ArrowDown"
+        ? (currentIndex + 1) % items.length
+        : event.key === "ArrowUp"
+          ? (currentIndex - 1 + items.length) % items.length
+          : event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? items.length - 1
+              : -1;
+
+    if (nextIndex >= 0 && items[nextIndex]) {
+      event.preventDefault();
+      items[nextIndex].focus();
+    }
+  };
+
+  return createPortal(
     <div
+      id="element-context-menu"
       ref={menuRef}
       className="element-context-menu"
       role="menu"
       aria-label="Menu do elemento"
+      aria-orientation="vertical"
       style={{ left: contextMenu.x, top: contextMenu.y }}
+      onPointerDown={stopEditorEvent}
+      onPointerUp={stopEditorEvent}
+      onClick={stopEditorEvent}
+      onDoubleClick={stopEditorEvent}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      }}
+      onKeyDown={handleMenuKeyDown}
     >
       <button
         type="button"
@@ -89,7 +152,7 @@ export function ElementContextMenu() {
         disabled={element.locked}
         onClick={() => run(() => duplicateElement(element.id))}
       >
-        <Copy size={14} /> Duplicar
+        <Copy size={14} aria-hidden="true" /> Duplicar
       </button>
       <button
         type="button"
@@ -99,34 +162,35 @@ export function ElementContextMenu() {
           closeContextMenu();
         }}
       >
-        <Copy size={14} /> Copiar
+        <Copy size={14} aria-hidden="true" /> Copiar
       </button>
       <button
         type="button"
         role="menuitem"
         disabled={element.locked}
-        onClick={() => run(() => {
-          setClipboardElement(element);
-          deleteElement(element.id);
-        })}
+        onClick={() =>
+          run(() => {
+            setClipboardElement(element);
+            deleteElement(element.id);
+          })
+        }
       >
-        <Scissors size={14} /> Recortar
+        <Scissors size={14} aria-hidden="true" /> Recortar
       </button>
       <button
         type="button"
         role="menuitem"
         disabled={!clipboardElement}
-        onClick={() => run(() => {
-          if (clipboardElement) {
-            const pastedId = activePage ? pasteElement(activePage.id, clipboardElement) : null;
+        onClick={() =>
+          run(() => {
+            if (!clipboardElement || !activePage) return;
+            const pastedId = pasteElement(activePage.id, clipboardElement);
             incrementPasteCount();
-            if (pastedId) {
-              selectElement(pastedId);
-            }
-          }
-        })}
+            selectElement(pastedId);
+          })
+        }
       >
-        <Copy size={14} /> Colar
+        <Copy size={14} aria-hidden="true" /> Colar
       </button>
       <hr />
       <button
@@ -135,7 +199,7 @@ export function ElementContextMenu() {
         disabled={element.locked}
         onClick={() => run(() => bringElementToFront(element.id))}
       >
-        <Layers size={14} /> Trazer para frente
+        <ChevronsUp size={14} aria-hidden="true" /> Trazer para frente
       </button>
       <button
         type="button"
@@ -143,7 +207,7 @@ export function ElementContextMenu() {
         disabled={element.locked}
         onClick={() => run(() => moveElementForward(element.id))}
       >
-        <Layers size={14} /> Avançar camada
+        <ArrowUp size={14} aria-hidden="true" /> Avançar camada
       </button>
       <button
         type="button"
@@ -151,7 +215,7 @@ export function ElementContextMenu() {
         disabled={element.locked}
         onClick={() => run(() => moveElementBackward(element.id))}
       >
-        <Layers size={14} /> Recuar camada
+        <ArrowDown size={14} aria-hidden="true" /> Recuar camada
       </button>
       <button
         type="button"
@@ -159,15 +223,15 @@ export function ElementContextMenu() {
         disabled={element.locked}
         onClick={() => run(() => sendElementToBack(element.id))}
       >
-        <Layers size={14} /> Enviar para trás
+        <ChevronsDown size={14} aria-hidden="true" /> Enviar para trás
       </button>
       <hr />
       <button type="button" role="menuitem" onClick={() => run(() => toggleElementLock(element.id))}>
-        {element.locked ? <Unlock size={14} /> : <Lock size={14} />}
+        {element.locked ? <Unlock size={14} aria-hidden="true" /> : <Lock size={14} aria-hidden="true" />}
         {element.locked ? "Desbloquear" : "Bloquear"}
       </button>
       <button type="button" role="menuitem" onClick={() => run(() => toggleElementVisibility(element.id))}>
-        <EyeOff size={14} /> Ocultar
+        <EyeOff size={14} aria-hidden="true" /> Ocultar
       </button>
       <button
         type="button"
@@ -176,8 +240,9 @@ export function ElementContextMenu() {
         disabled={element.locked}
         onClick={() => run(() => deleteElement(element.id))}
       >
-        <Trash2 size={14} /> Excluir
+        <Trash2 size={14} aria-hidden="true" /> Excluir
       </button>
-    </div>
+    </div>,
+    document.body,
   );
 }

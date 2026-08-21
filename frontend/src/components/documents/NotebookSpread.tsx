@@ -32,7 +32,7 @@ export function NotebookSpread({
         document={document}
         side="left"
         surface={leftSurface}
-        editable={false}
+        editable={editable && leftSurface?.kind === "page"}
         hidden={hideLeftSurface}
       />
       <NotebookSpine mode={bookPhase === "open" ? "open" : "closed"} />

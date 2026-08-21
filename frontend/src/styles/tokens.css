@@ -1,0 +1,78 @@
+/**
+ * Active UI tokens.
+ *
+ * Theme primitives (`--app-*`, `--ink`, `--primary-*`) still live in
+ * `index.css` because they vary by `data-theme`. This file owns the stable
+ * semantic and layout contract used by the application shell.
+ */
+:root {
+  /* Application frame */
+  --app-max-width: 1920px;
+  --space-window: clamp(12px, 1.5vw, 24px);
+  --app-window-edge: max(
+    var(--space-window),
+    calc((100vw - var(--app-max-width)) / 2)
+  );
+  --app-header-height: 64px;
+  --sidebar-width: clamp(252px, 16vw, 280px);
+  --sidebar-collapsed-width: 54px;
+  --bottom-dock-height: 64px;
+
+  /* Typography */
+  --ui-font-micro: 12px;
+  --ui-font-small: 14px;
+  --ui-font-body: 16px;
+  --ui-font-title: 20px;
+
+  /* Control sizes */
+  --ui-control-compact: 36px;
+  --ui-control-default: 42px;
+  --ui-control-comfortable: 48px;
+
+  /* Spacing */
+  --ui-space-1: 4px;
+  --ui-space-2: 8px;
+  --ui-space-3: 12px;
+  --ui-space-4: 16px;
+  --ui-space-5: 20px;
+  --ui-space-6: 24px;
+  --ui-space-8: 32px;
+
+  /* Radius */
+  --ui-radius-control: 10px;
+  --ui-radius-panel: 14px;
+  --ui-radius-floating: 16px;
+  --ui-radius-pill: 999px;
+
+  /* Semantic color roles */
+  --ui-border: color-mix(in srgb, var(--app-border) 72%, #9da7ba);
+  --ui-border-subtle: color-mix(in srgb, var(--app-border) 52%, transparent);
+  --ui-surface: color-mix(in srgb, var(--app-surface) 96%, white);
+  --ui-surface-muted: color-mix(in srgb, var(--app-surface-alt) 58%, white);
+  --ui-workspace: color-mix(in srgb, var(--app-surface-alt) 70%, #f4f5f8);
+  --ui-text-secondary: color-mix(in srgb, var(--ink-muted) 88%, var(--ink));
+  --ui-success-text: #53745f;
+  --ui-warning-surface: #fff6df;
+  --ui-warning-text: #8a6723;
+  --ui-danger-surface: #fff0f3;
+  --ui-danger-text: #a14860;
+  --ui-focus-ring: color-mix(in srgb, var(--primary-strong) 72%, white);
+
+  /* Elevation */
+  --ui-shadow-floating: 0 12px 30px rgba(39, 49, 74, 0.14);
+  --ui-shadow-menu: 0 16px 42px rgba(39, 49, 74, 0.18);
+
+  /* Motion */
+  --ui-transition-fast: 140ms ease;
+  --ui-transition-default: 180ms ease;
+
+  /* Stacking contract: canvas < chrome < sidebar < floating < header < overlays. */
+  --z-canvas: 1;
+  --z-editor-chrome: 100;
+  --z-sidebar: 300;
+  --z-floating: 1400;
+  --z-header: 1600;
+  --z-popover: 2200;
+  --z-tooltip: 2800;
+  --z-modal: 4000;
+}

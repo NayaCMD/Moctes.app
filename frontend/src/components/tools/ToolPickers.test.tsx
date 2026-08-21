@@ -1,7 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultLibraryAssets } from "../../data/initialAssetLibrary";
+import { useDocumentStore } from "../../stores/useDocumentStore";
 import { resetStores } from "../../test/helpers/resetStores";
 import { AssetPickerPanel } from "./AssetPickerPanel";
 import { DrawingPanel } from "./DrawingPanel";
@@ -11,18 +12,116 @@ import { ShapeStickerPicker } from "./ShapeStickerPicker";
 describe("tool pickers", () => {
   beforeEach(() => resetStores());
 
-  it("EmojiPicker troca categorias e insere somente apos escolha", async () => {
+  it("EmojiPicker busca em portugues, troca categorias e insere metadados", async () => {
     const onPick = vi.fn();
     render(<EmojiPicker destinationLabel="Destino: Pagina esquerda" onPick={onPick} />);
 
-    expect(screen.getByRole("tab", { name: "Recentes" })).toHaveAttribute("aria-selected", "true");
-    await userEvent.click(screen.getByRole("tab", { name: "Natureza" }));
-    expect(screen.getByRole("tab", { name: "Natureza" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Rostos" })).toHaveAttribute("aria-selected", "true");
+    await userEvent.click(screen.getByRole("tab", { name: "Animais" }));
+    expect(screen.getByRole("tab", { name: "Animais" })).toHaveAttribute("aria-selected", "true");
     expect(onPick).not.toHaveBeenCalled();
 
-    await userEvent.click(screen.getByRole("button", { name: "Inserir emoji 🌿" }));
-    expect(onPick).toHaveBeenCalledWith("🌿");
+    await userEvent.type(screen.getByLabelText("Buscar emojis"), "cão");
+    await userEvent.click(screen.getByRole("button", { name: "Inserir Rosto de cachorro" }));
+    expect(onPick).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "unicode:cachorro",
+        provider: "noto-color-emoji",
+        shortcode: "cachorro",
+      }),
+      { keepOpen: false },
+    );
     expect(screen.getByText("Destino: Pagina esquerda")).toBeInTheDocument();
+  });
+
+  it("EmojiPicker persiste recentes, favoritos e manter aberto por usuario", async () => {
+    const onPick = vi.fn();
+    render(<EmojiPicker destinationLabel="Destino" onPick={onPick} />);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Adicionar Rosto sorridente aos favoritos" }),
+    );
+    await userEvent.click(screen.getByRole("tab", { name: "Favoritos" }));
+    expect(screen.getByRole("button", { name: "Inserir Rosto sorridente" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByLabelText("Manter aberto para inserir vários"));
+    await userEvent.click(screen.getByRole("button", { name: "Inserir Rosto sorridente" }));
+    expect(onPick).toHaveBeenLastCalledWith(expect.objectContaining({ emoji: "😀" }), {
+      keepOpen: true,
+    });
+
+    await userEvent.click(screen.getByRole("tab", { name: "Recentes" }));
+    expect(screen.getByRole("button", { name: "Inserir Rosto sorridente" })).toBeInTheDocument();
+    expect(window.localStorage.getItem("moctes:emoji-picker:v2:anonymous")).toContain(
+      "unicode:sorriso_aberto",
+    );
+  });
+
+  it("EmojiPicker oferece vazio, carregamento incremental e navegacao por teclado", async () => {
+    render(<EmojiPicker destinationLabel="Destino" onPick={vi.fn()} />);
+    const search = screen.getByLabelText("Buscar emojis");
+    await userEvent.type(search, "resultado inexistente");
+    expect(screen.getByText("Nada por aqui")).toBeInTheDocument();
+    expect(screen.getByText(/Nenhum emoji encontrado/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getAllByRole("button", { name: "Limpar busca" })[0]);
+    const first = screen.getByRole("button", { name: "Inserir Rosto sorridente" });
+    first.focus();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(screen.getByRole("button", { name: "Inserir Sorriso com olhos grandes" })).toHaveFocus();
+
+    screen.getByRole("tab", { name: "Rostos" }).focus();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(screen.getByRole("tab", { name: "Pessoas" })).toHaveAttribute("aria-selected", "true");
+
+    await userEvent.type(search, "a");
+    expect(screen.getByRole("button", { name: "Carregar mais emojis" })).toBeInTheDocument();
+  });
+
+  it("EmojiPicker arrasta para a pagina e seleciona imediatamente", () => {
+    const state = useDocumentStore.getState();
+    const activeDocument = state.documents.find((document) => document.id === state.activeDocumentId)!;
+    const page = activeDocument.pages.find((candidate) => candidate.id === state.activePageId)!;
+    const pageElement = document.createElement("section");
+    pageElement.dataset.pageId = page.id;
+    pageElement.dataset.documentId = activeDocument.id;
+    pageElement.getBoundingClientRect = () =>
+      ({ left: 100, top: 50, width: 400, height: 500, right: 500, bottom: 550 }) as DOMRect;
+    Object.defineProperty(document, "elementsFromPoint", {
+      configurable: true,
+      value: vi.fn(() => [pageElement]),
+    });
+    const onDragInserted = vi.fn();
+    render(
+      <EmojiPicker
+        destinationLabel="Destino"
+        onPick={vi.fn()}
+        onDragInserted={onDragInserted}
+      />,
+    );
+    const before = page.elements.length;
+    const emoji = screen.getByRole("button", { name: "Inserir Rosto sorridente" });
+
+    fireEvent.pointerDown(emoji, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
+    fireEvent.pointerMove(window, { pointerId: 1, clientX: 300, clientY: 300 });
+    fireEvent.pointerUp(window, { pointerId: 1, clientX: 300, clientY: 300 });
+
+    const nextElements = useDocumentStore.getState().documents
+      .find((document) => document.id === activeDocument.id)!
+      .pages.find((candidate) => candidate.id === page.id)!.elements;
+    expect(nextElements).toHaveLength(before + 1);
+    expect(nextElements.at(-1)).toMatchObject({
+      type: "emoji",
+      content: {
+        emojiId: "unicode:sorriso_aberto",
+        provider: "noto-color-emoji",
+      },
+    });
+    expect(useDocumentStore.getState().selectedElementId).toBe(nextElements.at(-1)?.id);
+    expect(onDragInserted).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "unicode:sorriso_aberto" }),
+      { keepOpen: false },
+    );
   });
 
   it("ShapeStickerPicker organiza abas e controles de forma", async () => {
@@ -102,14 +201,14 @@ describe("tool pickers", () => {
     );
 
     expect(screen.getByRole("button", { name: "Importar imagem" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Adicionar a pagina" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Adicionar à página" })).toBeDisabled();
 
     await userEvent.type(screen.getByLabelText("Buscar"), "caderno");
     const imageButton = screen.getByRole("button", { name: "Selecionar Caderno colorido" });
     await userEvent.click(imageButton);
     expect(onPick).not.toHaveBeenCalled();
 
-    await userEvent.click(screen.getByRole("button", { name: "Adicionar a pagina" }));
+    await userEvent.click(screen.getByRole("button", { name: "Adicionar à página" }));
     expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ id: "caderno-cores" }));
     expect(screen.getByText("Destino: Pagina 2")).toBeInTheDocument();
   });

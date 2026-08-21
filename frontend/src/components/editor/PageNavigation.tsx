@@ -1,76 +1,73 @@
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { useState } from "react";
+import { useDocumentStore } from "../../stores/useDocumentStore";
 import type { MoctesDocument } from "../../types/document.types";
 import type { Page } from "../../types/page.types";
+import { PageTemplatePicker } from "../templates/PageTemplatePicker";
 
 interface PageNavigationProps {
   document: MoctesDocument;
   pages: Page[];
 }
 
-export function PageNavigation({
-  document,
-  pages,
-}: PageNavigationProps) {
-  if (pages.length === 0) {
-    return null;
-  }
+export function PageNavigation({ document, pages }: PageNavigationProps) {
+  const setActivePage = useDocumentStore((state) => state.setActivePage);
+  const createPageFromTemplate = useDocumentStore((state) => state.createPageFromTemplate);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+
+  if (pages.length === 0) return null;
 
   const activeIndex = Math.max(
     0,
-    pages.findIndex(
-      (page) => page.id === document.activePageId,
-    ),
+    pages.findIndex((page) => page.id === document.activePageId),
   );
-
   const activePage = pages[activeIndex] ?? pages[0];
-
-  /*
-   * No caderno:
-   *
-   * páginas 1–2 -> mostra 2
-   * páginas 3–4 -> mostra 4
-   * páginas 5–6 -> mostra 6
-   *
-   * Se houver uma quantidade ímpar:
-   *
-   * páginas 5–5 -> mostra 5
-   */
-  const spreadStartIndex =
-    activeIndex - (activeIndex % 2);
-
-  const spreadStartNumber =
-    spreadStartIndex + 1;
-
-  const spreadEndNumber = Math.min(
-    spreadStartIndex + 2,
-    pages.length,
-  );
-
-  const displayedPageNumber =
-    document.type === "notebook"
-      ? spreadEndNumber
-      : activePage?.order ?? activeIndex + 1;
-
-  const accessibleLabel =
-    document.type === "notebook"
-      ? spreadStartNumber === spreadEndNumber
-        ? `Página ${spreadEndNumber} de ${pages.length}`
-        : `Páginas ${spreadStartNumber} a ${spreadEndNumber} de ${pages.length}`
-      : `Página ${displayedPageNumber} de ${pages.length}`;
+  const displayedPageNumber = activePage?.order ?? activeIndex + 1;
+  const accessibleLabel = `Página ${displayedPageNumber} de ${pages.length}`;
 
   return (
-    <div
-      className="page-number-control"
-      aria-label="Página atual"
-    >
+    <div className="page-number-control" aria-label="Navegação de páginas">
       <button
         type="button"
-        className="page-number-button"
-        aria-label={accessibleLabel}
-        title={accessibleLabel}
-        disabled
+        aria-label="Página anterior"
+        data-tooltip="Página anterior"
+        disabled={activeIndex === 0}
+        onClick={() => setActivePage(pages[activeIndex - 1].id)}
       >
-        {displayedPageNumber}
+        <ChevronLeft size={16} aria-hidden="true" />
       </button>
+      <output className="page-number-indicator" aria-label={accessibleLabel}>
+        <strong>{displayedPageNumber}</strong>
+        <span>/ {pages.length}</span>
+      </output>
+      <button
+        type="button"
+        aria-label="Adicionar página"
+        data-tooltip="Adicionar página"
+        aria-haspopup="dialog"
+        aria-expanded={templatePickerOpen}
+        onClick={() => setTemplatePickerOpen(true)}
+      >
+        <Plus size={16} aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        aria-label="Próxima página"
+        data-tooltip="Próxima página"
+        disabled={activeIndex === pages.length - 1}
+        onClick={() => setActivePage(pages[activeIndex + 1].id)}
+      >
+        <ChevronRight size={16} aria-hidden="true" />
+      </button>
+      <PageTemplatePicker
+        open={templatePickerOpen}
+        documentType={document.type}
+        onClose={() => setTemplatePickerOpen(false)}
+        onSelect={(templateId) => {
+          createPageFromTemplate({ documentId: document.id, templateId });
+          setTemplatePickerOpen(false);
+        }}
+      />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import type {
   NotebookSection,
 } from "./notebook.types";
 import type { Page } from "./page.types";
+import type { PaperAppearance, PaperAppearanceTemplate } from "./page.types";
 
 export type { AssetCategory } from "./asset.types";
 
@@ -27,7 +28,7 @@ export interface Divider {
 }
 
 export interface MoctesDocument {
-  schemaVersion?: 1 | 2;
+  schemaVersion?: 1 | 2 | 3;
   id: string;
   type: DocumentType;
   title: string;
@@ -44,6 +45,8 @@ export interface MoctesDocument {
   clipboardColor?: string;
   favorite: boolean;
   pages: Page[];
+  defaultPaperAppearance?: PaperAppearance;
+  paperTemplates?: PaperAppearanceTemplate[];
   dividers: Divider[];
   activePageId: string;
   createdAt: string;
@@ -59,4 +62,6 @@ export interface SidebarAsset {
   source?: AssetSource;
   mimeType?: string;
   size?: number;
+  width?: number;
+  height?: number;
 }

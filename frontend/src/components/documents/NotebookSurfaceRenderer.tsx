@@ -1,5 +1,6 @@
 import type { MoctesDocument } from "../../types/document.types";
 import type { NotebookSurface } from "../../types/notebook.types";
+import { getPagesInSection } from "../../utils/notebookSurfaces.utils";
 import { DocumentPage } from "./DocumentPage";
 import { NotebookDivider } from "./NotebookDivider";
 
@@ -36,6 +37,7 @@ export function NotebookSurfaceRenderer({
     return (
       <NotebookDivider
         section={section}
+        pageCount={getPagesInSection(document, section.id).length}
         isActive={document.activeSurfaceId === activeSurface.id}
       />
     );
@@ -45,8 +47,8 @@ export function NotebookSurfaceRenderer({
 
   if (!page) {
     return (
-      <section className="notebook-empty-surface" aria-label="Folha indisponível">
-        <p>Folha indisponível.</p>
+      <section className="notebook-empty-surface" aria-label="Página indisponível">
+        <p>Página indisponível.</p>
       </section>
     );
   }
@@ -55,7 +57,7 @@ export function NotebookSurfaceRenderer({
     <DocumentPage
       page={page}
       className="notebook-single-page"
-      label={page.title || "Folha do caderno"}
+      label={page.title || "Página do caderno"}
       interactive={interactive}
     />
   );

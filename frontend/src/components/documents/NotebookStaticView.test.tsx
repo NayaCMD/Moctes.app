@@ -9,7 +9,10 @@ import type { MoctesDocument } from "../../types/document.types";
 import type { NotebookSection, NotebookSurface } from "../../types/notebook.types";
 import { getEditableActivePage } from "../../utils/document.utils";
 import { reconcileNotebookDocument } from "../../utils/notebookMigration.utils";
-import { buildNotebookSurfaces } from "../../utils/notebookSurfaces.utils";
+import {
+  buildNotebookSurfaces,
+  getPagesInSection,
+} from "../../utils/notebookSurfaces.utils";
 import { NotebookCover } from "./NotebookCover";
 import { NotebookDivider } from "./NotebookDivider";
 import { NotebookSurfaceRenderer } from "./NotebookSurfaceRenderer";
@@ -163,12 +166,14 @@ describe("Notebook visual estático", () => {
     expect(globalThis.document.querySelectorAll(".notebook-stage .paper-surface[data-active-page='true']")).toHaveLength(1);
   });
 
-  it("slot esquerdo renderiza elementos somente leitura e fora do foco", () => {
+  it("permite selecionar e editar elementos nas duas páginas visíveis sem virar o spread", async () => {
+    const user = userEvent.setup();
     const document = getNotebookDocument();
     const secondPage = document.pages[1];
+    const firstPage = document.pages[0];
 
-    if (!secondPage) {
-      throw new Error("Second notebook page not found");
+    if (!firstPage || !secondPage) {
+      throw new Error("Notebook pages not found");
     }
 
     useDocumentStore.getState().goToPage(secondPage.id, document.id);
@@ -180,9 +185,23 @@ describe("Notebook visual estático", () => {
       ".notebook-spread-slot[data-side='left'] .page-element-frame",
     );
     expect(leftElement).toBeInTheDocument();
-    expect(leftElement).toHaveAttribute("data-readonly", "true");
-    expect(leftElement).not.toHaveAttribute("role");
-    expect(leftElement).not.toHaveAttribute("tabindex");
+    expect(leftElement).toHaveAttribute("data-readonly", "false");
+    expect(leftElement).toHaveAttribute("role", "button");
+    expect(leftElement).toHaveAttribute("tabindex", "0");
+    expect(globalThis.document.querySelectorAll(".notebook-spread-slot[data-editable='true']")).toHaveLength(1);
+
+    await user.click(leftElement!);
+
+    const state = useDocumentStore.getState();
+    const stateDocument = state.documents.find((item) => item.id === document.id);
+    expect(state.selectedElementId).toBe(firstPage.elements[0].id);
+    expect(state.activePageId).toBe(firstPage.id);
+    expect(stateDocument?.activePageId).toBe(firstPage.id);
+    expect(stateDocument?.activeSurfaceId).toBe(secondPage.id);
+    expect(getEditableActivePage(stateDocument!, {
+      notebookBook: useEditorStore.getState().notebookBook,
+      notebookTransition: useEditorStore.getState().notebookTransition,
+    })?.id).toBe(firstPage.id);
   });
 
   it("NotebookCover usa os valores da capa e fica decorativo", () => {
@@ -208,12 +227,19 @@ describe("Notebook visual estático", () => {
   });
 
   it("NotebookDivider mostra título, quantidade de folhas e não renderiza PaperSurface", () => {
-    const section = getSection(getNotebookDocument());
+    const notebookDocument = getNotebookDocument();
+    const section = getSection(notebookDocument);
 
-    render(<NotebookDivider section={section} isActive />);
+    render(
+      <NotebookDivider
+        section={section}
+        pageCount={getPagesInSection(notebookDocument, section.id).length}
+        isActive
+      />,
+    );
 
     expect(screen.getByRole("heading", { name: section.title })).toBeInTheDocument();
-    expect(screen.getByText("2 folhas")).toBeInTheDocument();
+    expect(screen.getByText("2 páginas")).toBeInTheDocument();
     expect(document.querySelector(".paper-surface")).not.toBeInTheDocument();
   });
 
@@ -229,7 +255,6 @@ describe("Notebook visual estático", () => {
         id: "divider-extra",
         tabColor: "#f7d36d",
       },
-      pages: [],
     };
     const selectedSections: string[] = [];
 
@@ -278,7 +303,6 @@ describe("Notebook visual estático", () => {
       sections: [
         {
           ...section,
-          pages: [stalePage],
         },
       ],
     };
@@ -368,7 +392,15 @@ describe("Notebook visual estático", () => {
   });
 
   it("NotebookDivider não renderiza aba visual duplicada", () => {
-    render(<NotebookDivider section={getSection(getNotebookDocument())} isActive />);
+    const notebookDocument = getNotebookDocument();
+    const section = getSection(notebookDocument);
+    render(
+      <NotebookDivider
+        section={section}
+        pageCount={getPagesInSection(notebookDocument, section.id).length}
+        isActive
+      />,
+    );
 
     expect(document.querySelector(".notebook-divider-tab-marker")).not.toBeInTheDocument();
   });
@@ -419,7 +451,7 @@ describe("Notebook visual estático", () => {
 
     const activeAfterNext = getNotebookDocument().activeSurfaceId;
     expect(activeAfterNext).toBe(document.pages[0].id);
-    expect(screen.getByLabelText("Folha 1 de 2")).toHaveTextContent("1");
+    expect(screen.getByLabelText("Página 1 de 2")).toHaveTextContent("1");
 
     await user.click(screen.getByRole("button", { name: "Superfície anterior" }));
 
@@ -457,7 +489,7 @@ describe("Notebook visual estático", () => {
     render(<NotebookHarness />);
 
     expect(screen.getByRole("button", { name: "Próxima superfície" })).toBeDisabled();
-    expect(screen.getByLabelText("Folha 2 de 2")).toHaveTextContent("2");
+    expect(screen.getByLabelText("Página 2 de 2")).toHaveTextContent("2");
   });
 
   it("documento legado reconciliado renderiza sem erro", () => {

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useKeepFocusedEditorVisible } from "../../hooks/useKeepFocusedEditorVisible";
 import { useDocumentStore } from "../../stores/useDocumentStore";
 import { useEditorStore } from "../../stores/useEditorStore";
 import type { PageElement } from "../../types/element.types";
@@ -9,14 +10,13 @@ interface TextElementProps {
 }
 
 export function TextElement({ element, interactive = true }: TextElementProps) {
-  const documents = useDocumentStore((state) => state.documents);
   const updateElement = useDocumentStore((state) => state.updateElement);
   const editingTextElementId = useEditorStore((state) => state.editingTextElementId);
   const setEditingTextElementId = useEditorStore((state) => state.setEditingTextElementId);
-  const recordHistory = useEditorStore((state) => state.recordHistory);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const isEditing = interactive && editingTextElementId === element.id;
+  useKeepFocusedEditorVisible(isEditing, textareaRef);
 
   useEffect(() => {
     if (isEditing) {
@@ -33,7 +33,6 @@ export function TextElement({ element, interactive = true }: TextElementProps) {
   const finishEditing = () => {
     const nextText = textareaRef.current?.value ?? textContent.text;
     if (nextText !== textContent.text) {
-      recordHistory(documents);
       updateElement(element.id, { content: { kind: "text", text: nextText } });
     }
     setEditingTextElementId(null);

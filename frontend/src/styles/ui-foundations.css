@@ -1,0 +1,409 @@
+body {
+  font-size: var(--ui-font-body);
+  line-height: 1.5;
+}
+
+/* Interactive semantics share one cursor contract across the application. */
+:where(
+  button:not(:disabled),
+  a[href],
+  select:not(:disabled),
+  summary,
+  input:not(:disabled):is(
+      [type="button"],
+      [type="submit"],
+      [type="reset"],
+      [type="checkbox"],
+      [type="radio"],
+      [type="range"],
+      [type="color"],
+      [type="file"]
+    ),
+  label:has(
+    input:not(:disabled):is([type="checkbox"], [type="radio"], [type="file"])
+  ),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="menuitem"]:not([aria-disabled="true"]),
+  [role="tab"]:not([aria-disabled="true"]),
+  [role="option"]:not([aria-disabled="true"]),
+  [role="switch"]:not([aria-disabled="true"]),
+  [role="checkbox"]:not([aria-disabled="true"]),
+  [role="radio"]:not([aria-disabled="true"]),
+  [role="link"]:not([aria-disabled="true"])
+) {
+  cursor: pointer;
+}
+
+:where(
+  button:disabled,
+  select:disabled,
+  input:disabled,
+  [role="button"][aria-disabled="true"],
+  [role="menuitem"][aria-disabled="true"],
+  [role="tab"][aria-disabled="true"],
+  [role="option"][aria-disabled="true"],
+  [role="switch"][aria-disabled="true"],
+  [role="checkbox"][aria-disabled="true"],
+  [role="radio"][aria-disabled="true"],
+  [role="link"][aria-disabled="true"]
+) {
+  cursor: not-allowed;
+}
+
+button,
+input,
+select,
+textarea {
+  line-height: 1.35;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: color-mix(in srgb, var(--ink-muted) 80%, white);
+  opacity: 1;
+}
+
+button:disabled {
+  opacity: 0.55;
+}
+
+/* Authentication */
+.auth-card {
+  width: min(100%, 460px);
+  gap: 20px;
+  padding: clamp(28px, 5vw, 44px);
+}
+
+.auth-card h1 {
+  font-size: clamp(30px, 5vw, 38px);
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+}
+
+.auth-card p {
+  font-size: var(--ui-font-body);
+  line-height: 1.6;
+}
+
+.auth-card form {
+  gap: 18px;
+}
+
+.auth-card label {
+  gap: 8px;
+  font-size: var(--ui-font-small);
+  line-height: 1.4;
+}
+
+.auth-card input {
+  min-height: 50px;
+  border-radius: 13px;
+  padding: 12px 14px;
+  font-size: var(--ui-font-body);
+  font-weight: 600;
+}
+
+.auth-card input:hover {
+  border-color: color-mix(
+    in srgb,
+    var(--primary-strong) 48%,
+    var(--app-border)
+  );
+}
+
+.auth-card input:focus-visible {
+  border-color: var(--primary-strong);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--app-focus) 55%, transparent);
+}
+
+.auth-submit {
+  min-height: 50px;
+  font-size: var(--ui-font-body);
+}
+
+.auth-switch {
+  min-height: 42px;
+  font-size: var(--ui-font-small);
+}
+
+.auth-error {
+  padding: 11px 13px;
+  font-size: var(--ui-font-small);
+  line-height: 1.45;
+}
+
+/* Asset library forms and dialogs */
+.asset-thumbnail-missing,
+.asset-missing,
+.asset-lifecycle-message {
+  padding: 6px;
+  font-size: var(--ui-font-micro);
+  line-height: 1.35;
+}
+
+.asset-add-button,
+.asset-folder-actions button,
+.asset-filter-row button,
+.asset-restore-button,
+.asset-import-button,
+.asset-delete-button {
+  min-height: 32px;
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+.asset-search-label,
+.asset-sort-label,
+.asset-import-modal label,
+.control-label,
+.development-settings,
+.appearance-panel summary {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.asset-folder-select,
+.asset-search-label input,
+.asset-sort-label select,
+.asset-import-modal input,
+.asset-import-modal select,
+.paper-select {
+  min-height: var(--ui-control-default);
+  padding: 8px 10px;
+  font-size: var(--ui-font-small);
+}
+
+.asset-import-modal {
+  width: min(520px, calc(100vw - 32px));
+  gap: 16px;
+  padding: 22px;
+}
+
+.asset-library-drawer-panel {
+  width: min(400px, calc(100vw - 28px));
+}
+
+.asset-library-drawer-panel > header button {
+  min-height: var(--ui-control-default);
+  border: 1px solid color-mix(in srgb, var(--app-border) 72%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--app-surface-alt) 82%, white);
+  color: var(--ink);
+  padding-inline: 13px;
+}
+
+.asset-import-modal h2,
+.asset-library-drawer-panel h2 {
+  font-size: var(--ui-font-title);
+}
+
+.asset-import-modal header p,
+.asset-import-meta,
+.asset-error,
+.asset-field-error {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.asset-import-modal button,
+.asset-library-drawer-panel button {
+  min-height: var(--ui-control-default);
+  padding: 9px 13px;
+  font-size: var(--ui-font-small);
+}
+
+.asset-empty-state,
+.asset-import-preview {
+  font-size: var(--ui-font-small);
+  line-height: 1.5;
+}
+
+.notebook-tab {
+  font-size: var(--ui-font-micro);
+}
+
+.tool-popover,
+.tool-panel {
+  padding: 16px;
+}
+
+.tool-popover-header h2 {
+  font-size: 17px;
+}
+
+.tool-popover-header p,
+.tool-destination,
+.tool-target-note,
+.tool-panel h3,
+.tool-asset-panel h3 {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.emoji-grid button,
+.tool-asset-grid button,
+.drawing-panel button,
+.drawing-panel select,
+.drawing-panel input,
+.comment-composer button,
+.comment-composer input,
+.tool-tabs button {
+  min-height: var(--ui-control-compact);
+  font-size: var(--ui-font-small);
+}
+
+.comment-thread-messages,
+.comment-thread-popover input,
+.comment-thread-actions button {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.comment-thread-popover input {
+  min-height: var(--ui-control-default);
+}
+
+.comment-thread-actions button {
+  min-height: var(--ui-control-compact);
+  padding: 7px 10px;
+}
+
+/* Collaboration, sharing and recoverable revisions */
+.collaboration-avatars span,
+.remote-cursor span {
+  font-size: var(--ui-font-micro);
+}
+
+.sharing-dialog {
+  padding: 24px;
+  font-size: var(--ui-font-small);
+}
+
+.sharing-dialog > header span,
+.sharing-list span,
+.public-share-page > header strong {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.sharing-section-title p {
+  font-size: var(--ui-font-small);
+  line-height: 1.5;
+}
+
+.sharing-dialog h2 {
+  font-size: 26px;
+}
+
+.sharing-dialog h3 {
+  font-size: 17px;
+}
+
+.sharing-dialog button,
+.sharing-dialog input,
+.sharing-dialog select,
+.sync-modal button {
+  min-height: var(--ui-control-default);
+  font-size: var(--ui-font-small);
+}
+
+.sync-modal {
+  font-size: var(--ui-font-small);
+}
+
+.sync-modal header > span,
+.revision-history-header div > span,
+.conflict-comparison article > span,
+.conflict-comparison small,
+.conflict-comparison time,
+.revision-list small,
+.revision-list article > div > span {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.confirmation-dialog {
+  width: min(420px, calc(100vw - 32px));
+  gap: 15px;
+  padding: 22px;
+}
+
+.confirmation-dialog h2 {
+  font-size: var(--ui-font-title);
+}
+
+.confirmation-dialog p,
+.confirmation-dialog button {
+  font-size: var(--ui-font-small);
+}
+
+.confirmation-dialog button {
+  min-height: var(--ui-control-default);
+}
+
+@media (max-width: 520px) {
+  .auth-page {
+    align-items: start;
+    padding: 16px;
+  }
+
+  .auth-card {
+    margin-top: 4vh;
+    border-radius: 20px;
+    padding: 24px 20px;
+  }
+
+  .auth-card h1 {
+    font-size: 30px;
+  }
+
+  .sharing-dialog > header,
+  .sharing-section-title,
+  .sharing-generated-link,
+  .sharing-invite-form {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .sharing-generated-link input,
+  .sharing-invite-form input,
+  .sharing-invite-form select {
+    width: 100%;
+  }
+}
+
+@media (max-height: 620px) {
+  .auth-page {
+    padding: 14px;
+  }
+
+  .auth-card {
+    gap: 15px;
+    padding: 22px clamp(22px, 5vw, 32px);
+  }
+
+  .auth-card form {
+    gap: 14px;
+  }
+
+  .auth-card label {
+    gap: 6px;
+  }
+
+  .auth-card input,
+  .auth-submit {
+    min-height: 48px;
+  }
+
+  .auth-switch {
+    min-height: 38px;
+  }
+}
+.route-loading {
+  display: grid;
+  min-height: 16rem;
+  place-items: center;
+  padding: 2rem;
+  color: var(--ui-text-secondary);
+  font-size: 1rem;
+}

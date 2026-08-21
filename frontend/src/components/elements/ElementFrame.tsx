@@ -5,6 +5,8 @@ import type { PageElement } from "../../types/element.types";
 import { DEFAULT_SAFE_AREA, keepBoundsInsidePage, pointerToPagePercent } from "../../utils/coordinates.utils";
 import { getPageDropTargetFromPoint } from "../../utils/assetDrop.utils";
 import { moveBounds } from "../../utils/elementBounds.utils";
+import { recordComponentRender } from "../../performance/performanceInstrumentation";
+import { useCollaborationStore } from "../../stores/useCollaborationStore";
 
 interface ElementFrameProps {
   element: PageElement;
@@ -21,8 +23,11 @@ export function ElementFrame({
   interactive = true,
   children,
 }: ElementFrameProps) {
-  const documents = useDocumentStore((state) => state.documents);
-  const selectedElementId = useDocumentStore((state) => state.selectedElementId);
+  recordComponentRender("ElementFrame");
+  const selected = useDocumentStore(
+    (state) => state.selectedElementId === element.id,
+  );
+  const setActivePage = useDocumentStore((state) => state.setActivePage);
   const selectElement = useDocumentStore((state) => state.selectElement);
   const updateElement = useDocumentStore((state) => state.updateElement);
   const deleteElement = useDocumentStore((state) => state.deleteElement);
@@ -30,21 +35,29 @@ export function ElementFrame({
   const beginInteraction = useEditorStore((state) => state.beginInteraction);
   const updatePreview = useEditorStore((state) => state.updatePreview);
   const endInteraction = useEditorStore((state) => state.endInteraction);
-  const recordHistory = useEditorStore((state) => state.recordHistory);
-  const interaction = useEditorStore((state) => state.interaction);
+  const preview = useEditorStore((state) =>
+    state.interaction.elementId === element.id
+      ? state.interaction.preview
+      : null,
+  );
+  const interactionMode = useEditorStore((state) =>
+    state.interaction.elementId === element.id ? state.interaction.mode : "idle",
+  );
   const editorMode = useEditorStore((state) => state.editorMode);
   const setTransferPreview = useEditorStore((state) => state.setTransferPreview);
   const openContextMenu = useEditorStore((state) => state.openContextMenu);
-  const selected = selectedElementId === element.id;
-  const preview = interaction.elementId === element.id ? interaction.preview : null;
-  const current = { ...element, ...preview };
+  const closeContextMenu = useEditorStore((state) => state.closeContextMenu);
+  const remotePreview = useCollaborationStore(
+    (state) => state.elementPreviews[element.id]?.preview ?? null,
+  );
+  const current = { ...element, ...remotePreview, ...preview };
   const style = {
     left: `${current.x}%`,
     top: `${current.y}%`,
     width: `${current.width}%`,
     height: `${current.height}%`,
     zIndex:
-      interaction.elementId === element.id && interaction.mode === "dragging"
+      interactionMode === "dragging"
         ? 1000
         : element.zIndex,
     transform: `rotate(${current.rotation}deg)`,
@@ -56,14 +69,19 @@ export function ElementFrame({
     if (!interactive) {
       return;
     }
+    closeContextMenu();
+    setActivePage(pageId);
     selectElement(element.id);
 
     if (editorMode === "erase") {
       event.preventDefault();
       if (!element.locked) {
-        recordHistory(documents);
         deleteElement(element.id);
       }
+      return;
+    }
+
+    if (event.pointerType === "touch" && !selected) {
       return;
     }
 
@@ -72,8 +90,16 @@ export function ElementFrame({
     }
 
     event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // Window listeners still track the gesture when synthetic or legacy
+      // pointer sources do not support capture.
+    }
     const pageRect = pageElement.getBoundingClientRect();
+    const activePointerId = event.pointerId;
+    const touchDragThreshold = event.pointerType === "touch" ? 8 : 2;
+    const initialClientPoint = { x: event.clientX, y: event.clientY };
     const initialPointer = pointerToPagePercent(event.nativeEvent, pageRect);
     const pointerOffset = {
       x: initialPointer.x - element.x,
@@ -86,10 +112,23 @@ export function ElementFrame({
       height: element.height,
     };
     let moved = false;
+    let interruptedByPinch = false;
     let latestSourceBounds: Partial<PageElement> | null = null;
     let transferTarget: { pageId: string; x: number; y: number } | null = null;
 
     const handleMove = (moveEvent: PointerEvent) => {
+      if (moveEvent.pointerId !== activePointerId || interruptedByPinch) {
+        return;
+      }
+      if (
+        !moved &&
+        Math.hypot(
+          moveEvent.clientX - initialClientPoint.x,
+          moveEvent.clientY - initialClientPoint.y,
+        ) < touchDragThreshold
+      ) {
+        return;
+      }
       const target = getPageDropTargetFromPoint(moveEvent.clientX, moveEvent.clientY);
       const currentPointer = target?.pageId === pageId
         ? pointerToPagePercent(moveEvent, pageRect)
@@ -158,12 +197,17 @@ export function ElementFrame({
       updatePreview(next);
     };
 
-    const handleUp = () => {
+    const removeListeners = () => {
       window.removeEventListener("pointermove", handleMove);
       window.removeEventListener("pointerup", handleUp);
       window.removeEventListener("pointercancel", handleCancel);
-      if (moved && transferTarget) {
-        recordHistory(useDocumentStore.getState().documents);
+      window.removeEventListener("moctes:pinchstart", handlePinchStart);
+    };
+
+    const handleUp = (upEvent: PointerEvent) => {
+      if (upEvent.pointerId !== activePointerId) return;
+      removeListeners();
+      if (!interruptedByPinch && moved && transferTarget) {
         moveElementToPage({
           elementId: element.id,
           sourcePageId: pageId,
@@ -171,23 +215,27 @@ export function ElementFrame({
           x: transferTarget.x,
           y: transferTarget.y,
         });
-      } else if (moved && latestSourceBounds) {
-        recordHistory(useDocumentStore.getState().documents);
+      } else if (!interruptedByPinch && moved && latestSourceBounds) {
         updateElement(element.id, latestSourceBounds);
       }
       endInteraction();
     };
 
-    const handleCancel = () => {
-      window.removeEventListener("pointermove", handleMove);
-      window.removeEventListener("pointerup", handleUp);
-      window.removeEventListener("pointercancel", handleCancel);
+    const handleCancel = (cancelEvent: PointerEvent) => {
+      if (cancelEvent.pointerId !== activePointerId) return;
+      removeListeners();
+      endInteraction();
+    };
+
+    const handlePinchStart = () => {
+      interruptedByPinch = true;
       endInteraction();
     };
 
     window.addEventListener("pointermove", handleMove);
     window.addEventListener("pointerup", handleUp);
     window.addEventListener("pointercancel", handleCancel);
+    window.addEventListener("moctes:pinchstart", handlePinchStart);
   };
 
   return (
@@ -200,6 +248,7 @@ export function ElementFrame({
       data-hidden={element.hidden}
       data-eraser-active={editorMode === "erase"}
       data-readonly={!interactive}
+      data-element-id={element.id}
       style={style}
       aria-label={interactive ? `Selecionar elemento ${element.type}` : undefined}
       onPointerDown={startDrag}
@@ -209,6 +258,7 @@ export function ElementFrame({
         }
         event.preventDefault();
         event.stopPropagation();
+        setActivePage(pageId);
         selectElement(element.id);
         openContextMenu(element.id, event.clientX, event.clientY);
       }}
@@ -217,7 +267,12 @@ export function ElementFrame({
           return;
         }
         event.stopPropagation();
-        if ((element.type === "text" || element.type === "post-it") && !element.locked) {
+        if (
+          (element.type === "text" ||
+            element.type === "post-it" ||
+            element.type === "checklist") &&
+          !element.locked
+        ) {
           event.preventDefault();
           useEditorStore.getState().setEditingTextElementId(element.id);
         }

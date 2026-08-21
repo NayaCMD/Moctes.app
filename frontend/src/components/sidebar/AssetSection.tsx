@@ -64,13 +64,13 @@ function LibraryAssetThumbnail({
   onDelete?: (asset: LibraryAsset) => void;
   showActions: boolean;
 }) {
-  const previewSrc = useLibraryAssetPreview(asset);
+  const preview = useLibraryAssetPreview(asset);
 
   return (
     <AssetThumbnail
       asset={libraryAssetToSidebarAsset(asset)}
       selected={selected}
-      previewSrc={previewSrc}
+      preview={preview}
       onSelect={onSelect}
       onAdd={onAdd}
       onAdded={onAdded}

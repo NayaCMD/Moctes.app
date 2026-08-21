@@ -7,9 +7,17 @@ import type {
   PageElementType,
   ShapeAppearance,
 } from "../types/element.types";
-import { getElementSizing } from "./elementSizing.utils";
+import {
+  getAssetElementDimensions,
+  getElementSizing,
+} from "./elementSizing.utils";
 import { createPostItElement } from "./postIt.utils";
 import { createShapeAppearance } from "./shape.utils";
+import {
+  DEFAULT_TAPE_EDGE_STYLE,
+  DEFAULT_TAPE_RENDER_MODE,
+} from "./tape.utils";
+import { createChecklistElement } from "./checklist.utils";
 
 export function createElementFromTool(
   tool: EditorTool,
@@ -28,6 +36,8 @@ export function createElementFromTool(
   switch (tool) {
     case "text":
       return textElement(base.x, base.y);
+    case "checklist":
+      return createChecklistElement({ x: base.x, y: base.y });
     case "emojis": {
       const size = getElementSizing("emoji");
       return makeElement({
@@ -83,16 +93,10 @@ export function createElementFromAsset(
 
   if (asset.category === "stickers") {
     const sticker = assetElement("sticker", "image", asset, position.x, position.y);
-    const size = getElementSizing("sticker");
     return {
       ...sticker,
       type: "sticker",
       content: { kind: "sticker", assetId: asset.id, src: asset.src, alt: asset.label },
-      width: size.defaultWidth,
-      height: size.defaultHeight,
-      minWidth: size.minWidth,
-      minHeight: size.minHeight,
-      lockAspectRatio: size.lockAspectRatioByDefault,
     };
   }
 
@@ -147,6 +151,7 @@ export function createCommentElement(options: {
   y: number;
   text: string;
   color?: string;
+  authorLabel?: string;
 }): PageElement {
   const size = getElementSizing("comment");
   const createdAt = new Date().toISOString();
@@ -172,7 +177,7 @@ export function createCommentElement(options: {
       messages: [
         {
           id: `msg-${crypto.randomUUID()}`,
-          authorLabel: "Usuária",
+          authorLabel: options.authorLabel?.trim() || "Pessoa usuária",
           text: options.text,
           createdAt,
           attachments: [],
@@ -186,23 +191,46 @@ export function createCommentElement(options: {
 function assetElement(
   type: PageElementType,
   kind: "image" | "tape",
-  asset: { id: string; src: string; label: string },
+  asset: {
+    id: string;
+    src: string;
+    label: string;
+    width?: number;
+    height?: number;
+  },
   x: number,
   y: number,
 ): PageElement {
-  const size = getElementSizing(type === "tape" ? "tape" : "image");
+  const size = getElementSizing(
+    type === "tape" ? "tape" : type === "sticker" ? "sticker" : "image",
+  );
+  const assetDimensions =
+    kind === "image"
+      ? getAssetElementDimensions({
+          type: type === "sticker" ? "sticker" : "image",
+          intrinsicWidth: asset.width,
+          intrinsicHeight: asset.height,
+        })
+      : null;
   const content: ElementContent =
     kind === "image"
       ? { kind: "image", assetId: asset.id, src: asset.src, alt: asset.label }
-      : { kind: "tape", assetId: asset.id, src: asset.src, alt: asset.label };
+      : {
+          kind: "tape",
+          assetId: asset.id,
+          src: asset.src,
+          alt: asset.label,
+          renderMode: DEFAULT_TAPE_RENDER_MODE,
+          edgeStyle: DEFAULT_TAPE_EDGE_STYLE,
+        };
 
   return makeElement({
     id: crypto.randomUUID(),
     type,
     x,
     y,
-    width: size.defaultWidth,
-    height: size.defaultHeight,
+    width: assetDimensions?.width ?? size.defaultWidth,
+    height: assetDimensions?.height ?? size.defaultHeight,
     minWidth: size.minWidth,
     minHeight: size.minHeight,
     lockAspectRatio: size.lockAspectRatioByDefault,
@@ -213,7 +241,7 @@ function assetElement(
     content,
     style: {
       image: {
-        objectFit: "cover",
+        objectFit: kind === "image" ? "contain" : "cover",
         borderRadius: kind === "image" ? 6 : 8,
         boxShadow: kind === "image" ? "0 8px 14px rgba(71,83,113,0.14)" : undefined,
       },

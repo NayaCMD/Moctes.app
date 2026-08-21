@@ -6,6 +6,7 @@ interface NotebookSectionRemoveDialogProps {
   open: boolean;
   section: NotebookSection | null;
   sections: NotebookSection[];
+  pageCount: number;
   onConfirm: (strategy: RemoveSectionStrategy) => void;
   onCancel: () => void;
 }
@@ -16,6 +17,7 @@ export function NotebookSectionRemoveDialog({
   open,
   section,
   sections,
+  pageCount,
   onConfirm,
   onCancel,
 }: NotebookSectionRemoveDialogProps) {
@@ -25,7 +27,6 @@ export function NotebookSectionRemoveDialog({
     () => sections.filter((item) => item.id !== section?.id),
     [section?.id, sections],
   );
-  const pageCount = section?.pages.length ?? 0;
   const [mode, setMode] = useState<RemoveMode>(
     pageCount > 0 && otherSections.length > 0 ? "move-pages" : "delete-pages",
   );
@@ -80,7 +81,7 @@ export function NotebookSectionRemoveDialog({
         <p id={descriptionId}>
           {isLastSection
             ? "O caderno precisa manter ao menos uma seção válida."
-            : `Escolha o que fazer com ${pageCount} folha${pageCount === 1 ? "" : "s"} de ${section.title}.`}
+            : `Escolha o que fazer com ${pageCount} página${pageCount === 1 ? "" : "s"} de ${section.title}.`}
         </p>
         {!isLastSection && pageCount > 0 && (
           <fieldset className="notebook-remove-options">
@@ -93,7 +94,7 @@ export function NotebookSectionRemoveDialog({
                   checked={mode === "move-pages"}
                   onChange={() => setMode("move-pages")}
                 />
-                <span>Mover folhas para outra seção</span>
+                <span>Mover páginas para outra seção</span>
               </label>
             )}
             <label>
@@ -103,7 +104,7 @@ export function NotebookSectionRemoveDialog({
                 checked={mode === "delete-pages"}
                 onChange={() => setMode("delete-pages")}
               />
-              <span>Excluir a seção e suas folhas</span>
+              <span>Excluir a seção e suas páginas</span>
             </label>
           </fieldset>
         )}

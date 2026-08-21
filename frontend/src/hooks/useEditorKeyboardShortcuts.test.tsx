@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import { useDocumentStore } from "../stores/useDocumentStore";
 import { useEditorStore } from "../stores/useEditorStore";
+import { useAuthStore } from "../stores/useAuthStore";
 import { resetStores } from "../test/helpers/resetStores";
 import { useEditorKeyboardShortcuts } from "./useEditorKeyboardShortcuts";
 
@@ -23,7 +24,10 @@ function getNotebook() {
 }
 
 describe("useEditorKeyboardShortcuts notebook editing guard", () => {
-  beforeEach(() => resetStores());
+  beforeEach(() => {
+    resetStores();
+    useAuthStore.setState({ workspaces: [], activeWorkspaceId: null });
+  });
 
   function openNotebook() {
     useEditorStore.setState({
@@ -96,6 +100,30 @@ describe("useEditorKeyboardShortcuts notebook editing guard", () => {
     const updatedPage = useDocumentStore.getState().documents[0].pages[0];
     expect(updatedPage.elements).toHaveLength(before);
     expect(updatedPage.elements.some((item) => item.id === element.id)).toBe(true);
+    expect(useEditorStore.getState().undoStack).toHaveLength(0);
+  });
+
+  it("bloqueia comandos mutáveis para acesso somente leitura", async () => {
+    const user = userEvent.setup();
+    const { document } = getNotebook();
+    const page = document.pages[0];
+    const element = page.elements[0];
+    openNotebook();
+    useDocumentStore.getState().goToPage(page.id, document.id);
+    useDocumentStore.getState().selectElement(element.id);
+    useEditorStore.getState().setClipboardElement(element);
+    useAuthStore.setState({
+      workspaces: [
+        { id: "workspace-viewer", name: "Leitura", slug: "leitura", role: "VIEWER" },
+      ],
+      activeWorkspaceId: "workspace-viewer",
+    });
+
+    render(<KeyboardHarness />);
+    await user.keyboard("{Control>}v{/Control}");
+    await user.keyboard("{Delete}");
+
+    expect(useDocumentStore.getState().documents[0].pages[0].elements).toHaveLength(page.elements.length);
     expect(useEditorStore.getState().undoStack).toHaveLength(0);
   });
 });

@@ -2,7 +2,7 @@
 
 :root {
     --font-sans:
-        Inter, ui-rounded, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont,
+        "Inter Variable", Inter, ui-rounded, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont,
         sans-serif;
     --app-bg: #f6f7fc;
     --app-accent: #9fb8ff;
@@ -189,10 +189,6 @@ input,
 select,
 textarea {
     font: inherit;
-}
-
-button {
-    cursor: pointer;
 }
 
 button:focus-visible,
@@ -616,7 +612,7 @@ input:focus-visible {
 .asset-modal-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 3900;
+    z-index: var(--z-modal, 4000);
     display: grid;
     place-items: center;
     background: color-mix(in srgb,
@@ -746,7 +742,7 @@ input:focus-visible {
 .asset-library-drawer {
     position: fixed;
     inset: 0;
-    z-index: 3600;
+    z-index: var(--z-modal, 4000);
     display: flex;
     justify-content: flex-start;
     background: rgba(38, 50, 74, 0.18);
@@ -756,7 +752,7 @@ input:focus-visible {
 .asset-modal-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 5000;
+    z-index: var(--z-modal, 4000);
     display: grid;
     place-items: center;
     background: rgba(40, 46, 66, 0.18);
@@ -1196,7 +1192,7 @@ input:focus-visible {
 
 .asset-drag-preview {
     position: fixed;
-    z-index: 3000;
+    z-index: var(--z-floating, 1400);
     width: 70px;
     height: 70px;
     overflow: hidden;
@@ -1437,12 +1433,251 @@ input:focus-visible {
 }
 
 .page-image-element,
-.page-sticker-element,
-.page-tape-element {
+.page-sticker-element {
     display: block;
     width: 100%;
     height: 100%;
     user-select: none;
+}
+
+.page-tape-element {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    pointer-events: none;
+    user-select: none;
+}
+
+.page-tape-element[data-render-mode="repeat"] {
+    background-position: left center;
+    background-repeat: repeat-x;
+    background-size: auto 100%;
+}
+
+.page-tape-element[data-edge="torn-soft"] {
+    clip-path: polygon(
+        2% 0,
+        100% 0,
+        98.5% 14%,
+        100% 30%,
+        98% 48%,
+        100% 66%,
+        98.5% 84%,
+        100% 100%,
+        2% 100%,
+        0 84%,
+        1.5% 66%,
+        0 48%,
+        2% 30%,
+        0 14%
+    );
+}
+
+.page-tape-element[data-edge="torn-rough"] {
+    clip-path: polygon(
+        3.5% 0,
+        100% 0,
+        97% 10%,
+        99.5% 22%,
+        96.5% 38%,
+        100% 54%,
+        97.5% 68%,
+        99.5% 82%,
+        96% 100%,
+        2% 100%,
+        0 88%,
+        3.5% 73%,
+        0.5% 57%,
+        3% 41%,
+        0 25%
+    );
+}
+
+.page-tape-source-probe {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.page-checklist-element {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    flex-direction: column;
+    gap: 7px;
+    overflow: auto;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--checklist-text, var(--ink));
+    padding: 8px;
+    scrollbar-width: thin;
+}
+
+.page-checklist-element[data-surface="paper"] {
+    border-color: color-mix(in srgb, var(--checklist-accent) 24%, transparent);
+    background: var(--checklist-background, white);
+    box-shadow: 0 7px 16px rgba(71, 83, 113, 0.12);
+}
+
+.page-checklist-element[data-surface="highlight"] {
+    border-color: color-mix(in srgb, var(--checklist-accent) 28%, transparent);
+    background: color-mix(in srgb, var(--checklist-accent) 17%, var(--checklist-background));
+}
+
+.checklist-title,
+.checklist-title-input {
+    min-width: 0;
+    color: var(--checklist-accent);
+    font-size: 13px;
+    font-weight: 850;
+    line-height: 1.25;
+}
+
+.checklist-title-input,
+.checklist-item-input {
+    width: 100%;
+    border: 1px solid color-mix(in srgb, var(--checklist-accent) 38%, transparent);
+    border-radius: 6px;
+    outline: 0;
+    background: rgba(255, 255, 255, 0.78);
+    color: inherit;
+    padding: 3px 5px;
+}
+
+.checklist-title-input:focus,
+.checklist-item-input:focus {
+    border-color: var(--checklist-accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--checklist-accent) 22%, transparent);
+}
+
+.checklist-items {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.checklist-item {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 6px;
+    border-radius: 7px;
+    padding: 2px;
+    transition: background-color 140ms ease, opacity 140ms ease;
+}
+
+.page-checklist-element[data-editing="true"] .checklist-item {
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+}
+
+.checklist-item[data-dragging="true"] {
+    opacity: 0.45;
+}
+
+.checklist-item:hover {
+    background: color-mix(in srgb, var(--checklist-accent) 10%, transparent);
+}
+
+.checklist-marker {
+    display: grid;
+    width: 18px;
+    height: 18px;
+    min-height: 18px;
+    flex: 0 0 18px;
+    place-items: center;
+    border: 1.5px solid var(--checklist-accent);
+    border-radius: 50%;
+    background: transparent;
+    color: white;
+    padding: 0;
+    cursor: pointer;
+}
+
+.page-checklist-element[data-marker="square"] .checklist-marker {
+    border-radius: 4px;
+}
+
+.checklist-marker[aria-pressed="true"] {
+    background: var(--checklist-accent);
+}
+
+.checklist-item-text,
+.checklist-item-input {
+    min-width: 0;
+    font-size: 13px;
+    line-height: 1.3;
+}
+
+.checklist-item-text {
+    overflow-wrap: anywhere;
+}
+
+.checklist-item[data-completed="true"] .checklist-item-text,
+.checklist-item[data-completed="true"] .checklist-item-input {
+    color: var(--checklist-completed);
+    text-decoration: line-through;
+    text-decoration-thickness: 1.5px;
+}
+
+.checklist-drag-handle {
+    display: grid;
+    width: 14px;
+    place-items: center;
+    color: var(--ink-muted);
+    cursor: grab;
+}
+
+.checklist-item-actions {
+    display: inline-flex;
+    gap: 2px;
+}
+
+.checklist-item-actions button {
+    display: grid;
+    width: 22px;
+    height: 22px;
+    min-height: 22px;
+    place-items: center;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--ink-muted);
+    padding: 0;
+    cursor: pointer;
+}
+
+.checklist-item-actions button:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.8);
+    color: var(--ink);
+}
+
+.checklist-item-actions button:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.checklist-add-item {
+    display: inline-flex;
+    min-height: 28px;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border: 1px dashed color-mix(in srgb, var(--checklist-accent) 52%, transparent);
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--checklist-accent) 8%, transparent);
+    color: var(--checklist-accent);
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
 }
 
 .page-shape-element,
@@ -1811,7 +2046,7 @@ input:focus-visible {
 .tool-popover,
 .tool-panel {
     position: fixed;
-    z-index: 3700;
+    z-index: var(--z-popover, 2200);
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
     overflow: visible;
@@ -1838,7 +2073,7 @@ input:focus-visible {
 .tool-popover-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 3600;
+    z-index: calc(var(--z-popover, 2200) - 1);
     border: 0;
     background: transparent;
     cursor: default;
@@ -2391,16 +2626,25 @@ input:focus-visible {
 
 .element-context-menu {
     position: fixed;
-    z-index: calc(var(--z-dock) + 10);
+    z-index: var(--z-popover, 2200);
     display: grid;
-    width: 210px;
+    width: 224px;
+    max-height: calc(100dvh - 16px);
     gap: 3px;
+    overflow-y: auto;
     padding: 8px;
+    background: var(--ui-surface, #ffffff);
+    box-shadow: var(--ui-shadow-menu, 0 16px 42px rgba(39, 49, 74, 0.18));
+    pointer-events: auto;
+    overscroll-behavior: contain;
+    touch-action: manipulation;
+    user-select: none;
 }
 
 .element-context-menu button {
     display: flex;
     align-items: center;
+    min-height: 38px;
     gap: 8px;
     border: 0;
     border-radius: 9px;
@@ -2408,8 +2652,10 @@ input:focus-visible {
     color: var(--ink);
     padding: 8px 9px;
     text-align: left;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 750;
+    cursor: pointer;
+    touch-action: manipulation;
 }
 
 .element-context-menu button:hover,
@@ -2445,6 +2691,7 @@ input:focus-visible {
     overflow-x: auto;
     padding: 8px 10px;
     transform: translateX(-50%);
+    pointer-events: auto;
 }
 
 .text-toolbar select,
@@ -3083,5 +3330,361 @@ input:focus-visible {
     .tool-button {
         width: 42px;
         height: 42px;
+    }
+}
+
+.asset-lifecycle-message {
+    overflow: hidden;
+    color: var(--ink-muted);
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+}
+
+.asset-thumbnail-wrap:has(.asset-thumbnail[data-status="quarantined"]) .asset-lifecycle-message,
+.asset-thumbnail-wrap:has(.asset-thumbnail[data-status="rejected"]) .asset-lifecycle-message {
+    color: #9d4f65;
+}
+
+.asset-thumbnail:disabled {
+    cursor: not-allowed;
+    transform: none;
+}
+
+.asset-thumbnail[data-status="processing"] {
+    border-style: dashed;
+    background: color-mix(in srgb, var(--app-accent-soft) 42%, white);
+}
+
+.asset-thumbnail[data-status="quarantined"],
+.asset-thumbnail[data-status="rejected"] {
+    border-color: color-mix(in srgb, #b5485e 48%, var(--app-border));
+    background: color-mix(in srgb, #f8dce2 36%, white);
+}
+
+.asset-thumbnail[data-status="processing"] .asset-thumbnail-missing::before {
+    width: 16px;
+    height: 16px;
+    border: 2px solid color-mix(in srgb, var(--app-accent) 28%, transparent);
+    border-top-color: var(--app-accent);
+    border-radius: 50%;
+    content: "";
+    animation: asset-processing-spin 0.9s linear infinite;
+}
+
+@keyframes asset-processing-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Emoji Picker V2 */
+.emoji-glyph {
+    font-family: "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+    font-weight: 400;
+    font-variant-emoji: emoji;
+}
+
+.emoji-picker {
+    grid-template-rows: auto auto auto minmax(150px, 1fr) auto;
+    min-height: 0;
+}
+
+.emoji-search {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    min-height: 42px;
+    gap: 8px;
+    border: 1px solid color-mix(in srgb, var(--app-border) 82%, transparent);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--app-surface-alt) 78%, white);
+    color: var(--ink-muted);
+    padding: 0 10px;
+}
+
+.emoji-search:focus-within {
+    border-color: var(--primary-strong);
+    box-shadow: 0 0 0 3px var(--app-focus);
+}
+
+.emoji-search input {
+    min-width: 0;
+    height: 40px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 650;
+}
+
+.emoji-search input::-webkit-search-cancel-button {
+    display: none;
+}
+
+.emoji-search .emoji-search-clear {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    min-height: 0;
+    place-items: center;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ink-muted);
+    padding: 0;
+    cursor: pointer;
+}
+
+.emoji-search .emoji-search-clear:hover {
+    background: var(--app-accent-soft);
+    color: var(--ink);
+}
+
+.emoji-category-tabs {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--app-surface-alt) 82%, white);
+    padding: 4px;
+    scrollbar-width: none;
+}
+
+.emoji-category-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.emoji-category-tabs button {
+    display: grid;
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    place-items: center;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--ink-muted);
+    padding: 0;
+    cursor: pointer;
+}
+
+.emoji-category-tabs button:hover,
+.emoji-category-tabs button[data-active="true"] {
+    background: white;
+    color: var(--primary-strong);
+    box-shadow: 0 3px 10px rgba(74, 91, 136, 0.12);
+}
+
+.emoji-results-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 20px;
+    color: var(--ink);
+    font-size: 13px;
+}
+
+.emoji-results-heading span {
+    color: var(--ink-muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.emoji-grid-scroll {
+    min-height: 180px;
+    max-height: 292px;
+    overflow-y: auto;
+    border: 1px solid color-mix(in srgb, var(--app-border) 64%, transparent);
+    border-radius: 13px;
+    background: color-mix(in srgb, var(--app-surface) 88%, white);
+    padding: 8px;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+}
+
+.emoji-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.emoji-tile {
+    position: relative;
+    min-width: 0;
+    aspect-ratio: 1;
+}
+
+.emoji-grid .emoji-option {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    min-height: 46px;
+    place-items: center;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    background: transparent;
+    font-size: 25px;
+    line-height: 1;
+    padding: 0;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+
+.emoji-grid .emoji-option:hover {
+    border-color: color-mix(in srgb, var(--primary) 58%, transparent);
+    background: var(--app-accent-muted);
+    transform: translateY(-1px);
+}
+
+.emoji-grid .emoji-option:active {
+    cursor: grabbing;
+    transform: scale(0.96);
+}
+
+.emoji-grid .emoji-favorite-action {
+    position: absolute;
+    z-index: 1;
+    top: 1px;
+    right: 1px;
+    display: grid;
+    width: 20px;
+    height: 20px;
+    min-height: 20px;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--ink-muted);
+    padding: 0;
+    opacity: 0;
+    box-shadow: 0 2px 7px rgba(51, 65, 96, 0.14);
+    cursor: pointer;
+    transition: opacity 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.emoji-tile:hover .emoji-favorite-action,
+.emoji-tile:focus-within .emoji-favorite-action,
+.emoji-grid .emoji-favorite-action[data-favorite="true"] {
+    opacity: 1;
+}
+
+.emoji-grid .emoji-favorite-action:hover,
+.emoji-grid .emoji-favorite-action[data-favorite="true"] {
+    color: #e8587a;
+}
+
+.emoji-grid .emoji-favorite-action:hover {
+    transform: scale(1.08);
+}
+
+.emoji-empty-state {
+    display: grid;
+    min-height: 166px;
+    place-content: center;
+    justify-items: center;
+    gap: 6px;
+    color: var(--ink-muted);
+    padding: 18px;
+    text-align: center;
+}
+
+.emoji-empty-state strong {
+    color: var(--ink);
+    font-size: 14px;
+}
+
+.emoji-empty-state span {
+    max-width: 250px;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.emoji-empty-state button,
+.emoji-load-more button {
+    min-height: 32px;
+    border: 1px solid var(--app-border);
+    border-radius: 9px;
+    background: white;
+    color: var(--primary-strong);
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.emoji-load-more {
+    display: grid;
+    place-items: center;
+    padding: 9px 0 2px;
+}
+
+.emoji-picker-footer {
+    display: grid;
+    gap: 7px;
+    border-top: 1px dashed color-mix(in srgb, var(--app-border) 66%, transparent);
+    padding-top: 9px;
+}
+
+.emoji-keep-open {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.emoji-keep-open input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary-strong);
+    cursor: pointer;
+}
+
+.asset-drag-preview:has(.asset-drag-preview-emoji) {
+    display: grid;
+    place-items: center;
+    overflow: visible;
+    border: 0;
+    background: rgba(255, 255, 255, 0.88);
+}
+
+.asset-drag-preview-emoji {
+    font-family: "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+    font-size: 44px;
+    line-height: 1;
+}
+
+.page-emoji-custom-asset {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+}
+
+body.emoji-dragging,
+body.emoji-dragging * {
+    cursor: grabbing !important;
+}
+
+@media (hover: none) {
+    .emoji-grid .emoji-favorite-action {
+        opacity: 0.76;
+    }
+}
+
+@media (max-width: 640px) {
+    .emoji-grid-scroll {
+        max-height: min(36dvh, 300px);
+    }
+
+    .emoji-grid .emoji-option {
+        min-height: 48px;
     }
 }

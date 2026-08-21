@@ -1,5 +1,6 @@
 import type { PageElement } from "../../types/element.types";
 import { useElementAssetPreview } from "../../hooks/useLibraryAssetPreview";
+import { AssetMedia } from "../assets/AssetMedia";
 
 interface StickerElementProps {
   element: PageElement;
@@ -7,22 +8,17 @@ interface StickerElementProps {
 
 export function StickerElement({ element }: StickerElementProps) {
   const content = element.content.kind === "sticker" ? element.content : null;
-  const src = useElementAssetPreview(content?.assetId, content?.src ?? "");
+  const preview = useElementAssetPreview(content?.assetId, content?.src ?? "");
 
   if (element.content.kind !== "sticker") {
     return null;
   }
-  if (!src) {
-    return <span className="asset-missing">Asset indisponivel</span>;
-  }
-
   return (
-    <img
+    <AssetMedia
+      preview={preview}
       className="page-sticker-element"
-      src={src}
       alt={element.content.alt}
       style={element.style.image}
-      draggable={false}
     />
   );
 }

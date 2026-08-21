@@ -39,15 +39,26 @@ export function validateNotebookDocument(document: MoctesDocument): NotebookVali
   const sections = document.sections ?? [];
   const sectionIds = new Set<string>();
   const dividerIds = new Set<string>();
-  const sectionPageIds = new Set<string>();
+  const pageIds = new Set<string>();
   const allIds = new Set<string>();
 
   for (const section of sections) {
-    validateSection(section, errors, sectionIds, dividerIds, sectionPageIds, allIds);
+    validateSection(section, errors, sectionIds, dividerIds, allIds);
   }
 
   for (const page of document.pages) {
-    if (!sectionPageIds.has(page.id)) {
+    if (pageIds.has(page.id)) {
+      errors.push({
+        code: "DUPLICATE_PAGE",
+        id: page.id,
+        message: `Page ${page.id} appears more than once in the notebook.`,
+      });
+      continue;
+    }
+    pageIds.add(page.id);
+    trackUniqueId(page.id, "Page", errors, allIds);
+
+    if (!page.sectionId || !sectionIds.has(page.sectionId)) {
       errors.push({
         code: "ORPHAN_PAGE",
         id: page.id,
@@ -90,7 +101,6 @@ function validateSection(
   errors: NotebookValidationError[],
   sectionIds: Set<string>,
   dividerIds: Set<string>,
-  pageIds: Set<string>,
   allIds: Set<string>,
 ) {
   if (!section.id) {
@@ -123,18 +133,6 @@ function validateSection(
     trackUniqueId(section.divider.id, "Divider", errors, allIds);
   }
 
-  for (const page of section.pages) {
-    if (pageIds.has(page.id)) {
-      errors.push({
-        code: "DUPLICATE_PAGE",
-        id: page.id,
-        message: `Page ${page.id} appears in more than one section.`,
-      });
-    } else {
-      pageIds.add(page.id);
-      trackUniqueId(page.id, "Page", errors, allIds);
-    }
-  }
 }
 
 function trackUniqueId(

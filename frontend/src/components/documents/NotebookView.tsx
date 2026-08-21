@@ -19,16 +19,18 @@ import { NotebookFrontCover } from "./NotebookFrontCover";
 import { NotebookNavigation } from "./NotebookNavigation";
 import { NotebookSpread } from "./NotebookSpread";
 import { NotebookTabs } from "./NotebookTabs";
+import { useWorkspaceCapabilities } from "../../hooks/useWorkspaceCapabilities";
 
 interface NotebookViewProps {
   document: MoctesDocument;
 }
 
 export function NotebookView({ document }: NotebookViewProps) {
+  const { canEdit } = useWorkspaceCapabilities();
   const notebookTransition = useNotebookTransition(document);
   const notebookBook = useNotebookBook(document);
   const selectedElementId = useDocumentStore((state) => state.selectedElementId);
-  const addPageToSection = useDocumentStore((state) => state.addPageToSection);
+  const createPageFromTemplate = useDocumentStore((state) => state.createPageFromTemplate);
   const movePageToSection = useDocumentStore((state) => state.movePageToSection);
   const cancelNotebookTransition = useEditorStore((state) => state.cancelNotebookTransition);
   const surfaces = buildNotebookSurfaces(document);
@@ -103,7 +105,9 @@ export function NotebookView({ document }: NotebookViewProps) {
           document={document}
           leftSurface={spread.leftSurface}
           rightSurface={spread.rightSurface}
-          editable={notebookBook.isOpen && !notebookTransition.isTransitioning}
+          editable={
+            canEdit && notebookBook.isOpen && !notebookTransition.isTransitioning
+          }
           transition={notebookTransition.transition}
           bookPhase={notebookBook.state.phase}
           onTransitionComplete={notebookTransition.completeTransition}
@@ -138,22 +142,27 @@ export function NotebookView({ document }: NotebookViewProps) {
           sections={document.sections ?? []}
           activeSectionId={activeSectionId}
           disabled={controlsDisabled}
+          editable={canEdit}
           onSelectSection={notebookTransition.navigateToSection}
         />
         <NotebookNavigation
           document={document}
           activeSurface={spread.rightSurface}
           disabled={controlsDisabled}
+          editable={canEdit}
           onPrevious={notebookTransition.navigatePrevious}
           onNext={notebookTransition.navigateNext}
-          onAddPage={(sectionId) => {
+          onAddPage={(sectionId, templateId) => {
             cancelNotebookTransition(document.id);
-            addPageToSection(document.id, sectionId);
+            createPageFromTemplate({ documentId: document.id, sectionId, templateId });
           }}
           onMovePage={(pageId, sectionId) => {
             cancelNotebookTransition(document.id);
             movePageToSection(document.id, pageId, sectionId);
           }}
+          onSelectPage={(pageId) =>
+            notebookTransition.navigateToSurface(pageId)
+          }
         />
         <div className="notebook-book-status" aria-live="polite">
           {notebookBook.state.phase === "closed" ? "Caderno fechado" : null}

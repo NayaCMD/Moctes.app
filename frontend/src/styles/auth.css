@@ -1,0 +1,215 @@
+.auth-page {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(
+      circle at 20% 10%,
+      rgba(159, 184, 255, 0.42),
+      transparent 30%
+    ),
+    linear-gradient(160deg, #f4f8ff, #fff9fd);
+}
+
+.auth-card {
+  display: grid;
+  width: min(100%, 420px);
+  gap: 18px;
+  border: 1px solid rgba(159, 184, 255, 0.5);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 24px 70px rgba(69, 78, 104, 0.18);
+  padding: clamp(24px, 5vw, 42px);
+  backdrop-filter: blur(16px);
+}
+
+.auth-brand {
+  color: #526ed4;
+  font-size: 15px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.auth-invitation-context {
+  border: 1px solid #cfdafb;
+  border-radius: 12px;
+  padding: 11px 13px;
+  background: #edf2ff;
+  color: #485d97;
+  font-size: 0.88rem;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.auth-card h1,
+.auth-card p {
+  margin: 0;
+}
+
+.auth-card h1 {
+  color: #26324a;
+  font-size: clamp(25px, 5vw, 34px);
+  line-height: 1.08;
+}
+
+.auth-card p {
+  color: #71809b;
+  line-height: 1.55;
+}
+
+.auth-card form,
+.auth-card label {
+  display: grid;
+  gap: 8px;
+}
+
+.auth-card form {
+  gap: 15px;
+}
+
+.auth-card label {
+  color: #52618a;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.auth-card input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #dbe3f6;
+  border-radius: 12px;
+  background: #fbfcff;
+  color: #26324a;
+  padding: 10px 12px;
+}
+
+.auth-submit,
+.auth-switch,
+.account-toolbar button {
+  border-radius: 12px;
+  font-weight: 850;
+}
+
+.auth-submit {
+  min-height: 46px;
+  border: 0;
+  background: #7694f4;
+  color: white;
+  box-shadow: 0 10px 22px rgba(82, 110, 212, 0.22);
+}
+
+.auth-switch {
+  border: 0;
+  background: transparent;
+  color: #526ed4;
+  padding: 6px;
+}
+
+.auth-error {
+  border-radius: 10px;
+  background: #fff0f3;
+  color: #a04861;
+  padding: 9px 11px;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.auth-status {
+  justify-items: center;
+  text-align: center;
+}
+
+.account-toolbar {
+  position: fixed;
+  top: 8px;
+  right: 14px;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: min(560px, calc(100vw - 28px));
+  border: 1px solid rgba(159, 184, 255, 0.4);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 24px rgba(69, 78, 104, 0.15);
+  padding: 5px;
+  color: #52618a;
+  backdrop-filter: blur(12px);
+}
+
+.account-toolbar span {
+  max-width: 120px;
+  overflow: hidden;
+  padding-left: 6px;
+  font-size: 11px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-toolbar .document-sync-status {
+  display: inline-flex;
+  max-width: none;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  background: #edf2ff;
+  padding: 5px 7px;
+  color: #52618a;
+  white-space: nowrap;
+}
+
+.account-toolbar .document-sync-status[data-phase="offline"],
+.account-toolbar .document-sync-status[data-phase="waiting-retry"] {
+  background: #fff7df;
+  color: #7a6328;
+}
+
+.account-toolbar .document-sync-status[data-phase="error"],
+.account-toolbar .document-sync-status[data-phase="conflict"] {
+  background: #fff0f3;
+  color: #a04861;
+}
+
+.account-toolbar .document-sync-status button {
+  min-height: 22px;
+  border: 0;
+  background: rgba(255, 255, 255, 0.74);
+  padding-inline: 6px;
+  font-size: 10px;
+}
+
+.account-toolbar .document-sync-status > span {
+  display: inline;
+  max-width: none;
+  overflow: visible;
+  padding: 0;
+  text-overflow: clip;
+}
+
+.account-toolbar select,
+.account-toolbar button {
+  min-height: 30px;
+  border: 1px solid #dbe3f6;
+  background: #f4f7ff;
+  color: #52618a;
+  padding-inline: 8px;
+  font-size: 11px;
+}
+
+@media (max-width: 620px) {
+  .account-toolbar span {
+    display: none;
+  }
+
+  .account-toolbar .document-sync-status {
+    display: inline-flex;
+  }
+
+  .account-toolbar select {
+    min-width: 0;
+    max-width: 190px;
+  }
+}

@@ -1,8 +1,9 @@
 import { Plus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLibraryAssetPreview } from "../../hooks/useLibraryAssetPreview";
 import { useAssetLibraryStore } from "../../stores/useAssetLibraryStore";
 import type { LibraryAsset } from "../../types/asset.types";
+import { AssetMedia } from "../assets/AssetMedia";
 
 interface AssetPickerPanelProps {
   title: string;
@@ -37,7 +38,12 @@ export function AssetPickerPanel({
       return matchesQuery && matchesFolder;
     });
   }, [assets, folderId, query]);
-  const selectedAsset = visibleAssets.find((asset) => asset.id === selectedAssetId) ?? null;
+  const selectedAsset =
+    visibleAssets.find(
+      (asset) =>
+        asset.id === selectedAssetId &&
+        (!asset.status || asset.status === "READY"),
+    ) ?? null;
 
   const importLabel =
     importLabelOverride ??
@@ -92,6 +98,7 @@ export function AssetPickerPanel({
               asset={asset}
               selected={selectedAssetId === asset.id}
               onSelect={() => setSelectedAssetId(asset.id)}
+              onUnavailable={() => setSelectedAssetId(null)}
               onPick={onPick}
               variant={variant}
             />
@@ -102,7 +109,7 @@ export function AssetPickerPanel({
       <div className="tool-picker-footer">
         <span>{destinationLabel}</span>
         <button type="button" disabled={!selectedAsset} onClick={() => selectedAsset && onPick(selectedAsset)}>
-          Adicionar a pagina
+          Adicionar à página
         </button>
       </div>
     </div>
@@ -113,34 +120,60 @@ function ToolAssetButton({
   asset,
   selected,
   onSelect,
+  onUnavailable,
   onPick,
   variant,
 }: {
   asset: LibraryAsset;
   selected: boolean;
   onSelect: () => void;
+  onUnavailable: () => void;
   onPick: (asset: LibraryAsset) => void;
   variant: "image" | "tape" | "default";
 }) {
-  const previewSrc = useLibraryAssetPreview(asset);
+  const preview = useLibraryAssetPreview(asset);
+  const ready = preview.availability === "ready" && Boolean(preview.src);
+
+  useEffect(() => {
+    if (selected && !ready) {
+      onUnavailable();
+    }
+  }, [onUnavailable, ready, selected]);
 
   return (
-    <button
-      type="button"
+    <div
+      className="tool-asset-option"
       data-variant={variant}
       data-selected={selected}
-      aria-label={`Selecionar ${asset.name}`}
-      aria-pressed={selected}
-      onClick={onSelect}
-      onDoubleClick={() => onPick(asset)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          onPick(asset);
-        }
-      }}
     >
-      {previewSrc ? <img src={previewSrc} alt="" /> : <span>Indisponivel</span>}
-    </button>
+      <button
+        type="button"
+        aria-label={`Selecionar ${asset.name}`}
+        aria-pressed={selected}
+        aria-disabled={!ready}
+        onClick={ready ? onSelect : undefined}
+        onDoubleClick={ready ? () => onPick(asset) : undefined}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && ready) {
+            event.preventDefault();
+            onPick(asset);
+          }
+        }}
+      >
+        <AssetMedia
+          preview={preview}
+          alt=""
+          variant="picker"
+          showRetry={false}
+        />
+      </button>
+      {preview.canRetry && (
+        <span className="tool-asset-state">
+          <button type="button" onClick={preview.retry}>
+            Tentar novamente
+          </button>
+        </span>
+      )}
+    </div>
   );
 }

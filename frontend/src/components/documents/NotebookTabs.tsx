@@ -25,6 +25,7 @@ interface NotebookTabsProps {
   activeSectionId: string | null;
   onSelectSection: (sectionId: string) => void;
   disabled?: boolean;
+  editable?: boolean;
 }
 
 export function NotebookTabs({
@@ -33,6 +34,7 @@ export function NotebookTabs({
   activeSectionId,
   onSelectSection,
   disabled = false,
+  editable = true,
 }: NotebookTabsProps) {
   const addSection = useDocumentStore((state) => state.addSection);
   const renameSection = useDocumentStore((state) => state.renameSection);
@@ -44,6 +46,10 @@ export function NotebookTabs({
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [settingsSectionId, setSettingsSectionId] = useState<string | null>(null);
   const [removeSectionId, setRemoveSectionId] = useState<string | null>(null);
+  const removingSectionPageCount = useDocumentStore((state) => {
+    const document = state.documents.find((item) => item.id === documentId);
+    return document?.pages.filter((page) => page.sectionId === removeSectionId).length ?? 0;
+  });
   const [dragPreview, setDragPreview] = useState<{ sectionId: string; position: number } | null>(null);
   const tabsRef = useRef<HTMLElement | null>(null);
   const dragStateRef = useRef<{
@@ -94,7 +100,7 @@ export function NotebookTabs({
     event: ReactPointerEvent<HTMLButtonElement>,
     section: NotebookSection,
   ) => {
-    if (disabled || event.button !== 0) {
+    if (disabled || !editable || event.button !== 0) {
       return;
     }
 
@@ -243,7 +249,7 @@ export function NotebookTabs({
               onPointerCancel={clearTabPointer}
               onClick={() => handleTabClick(section.id)}
               onKeyDown={(event) => {
-                if (!event.altKey || disabled) {
+                if (!event.altKey || disabled || !editable) {
                   return;
                 }
                 const direction =
@@ -262,7 +268,7 @@ export function NotebookTabs({
             </button>
             <NotebookSectionMenu
               sectionTitle={title}
-              disabled={disabled}
+              disabled={disabled || !editable}
               canMoveLeft={index > 0}
               canMoveRight={index < sections.length - 1}
               onRename={() => {
@@ -285,7 +291,7 @@ export function NotebookTabs({
         type="button"
         className="notebook-add-section-button"
         aria-label="Adicionar seção"
-        disabled={disabled}
+        disabled={disabled || !editable}
         onClick={() => {
           setSelectedSectionId(null);
           setDialogMode("add");
@@ -322,6 +328,7 @@ export function NotebookTabs({
           open
           section={removingSection}
           sections={sections}
+          pageCount={removingSectionPageCount}
           onConfirm={handleRemoveSection}
           onCancel={() => setRemoveSectionId(null)}
         />

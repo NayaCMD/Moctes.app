@@ -30,8 +30,11 @@ export function getPageDropTargetFromPoint(
   clientY: number,
   root: Document = document,
 ): DropTargetInfo | null {
-  const element = root.elementFromPoint(clientX, clientY);
-  const page = element?.closest<HTMLElement>("[data-page-id][data-document-id]");
+  const elements = root.elementsFromPoint?.(clientX, clientY) ?? [root.elementFromPoint(clientX, clientY)];
+  const page = elements
+    .filter((element): element is Element => Boolean(element))
+    .map((element) => element.closest<HTMLElement>("[data-page-id][data-document-id]"))
+    .find((element): element is HTMLElement => Boolean(element));
   if (!page) {
     return null;
   }

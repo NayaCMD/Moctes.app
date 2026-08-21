@@ -10,10 +10,61 @@ services:
       POSTGRES_DB: moctes
 
     ports:
-      - "5432:5432"
+      - "127.0.0.1:${MOCTES_POSTGRES_PORT:-5433}:5432"
 
     volumes:
       - moctes_postgres_data:/var/lib/postgresql/data
 
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moctes -d moctes"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    container_name: moctes-minio
+    restart: unless-stopped
+
+    environment:
+      MINIO_ROOT_USER: moctes
+      MINIO_ROOT_PASSWORD: moctes-development
+      MINIO_API_CORS_ALLOW_ORIGIN: http://localhost:5173
+
+    command: server /data --console-address ":9001"
+
+    ports:
+      - "127.0.0.1:${MOCTES_MINIO_API_PORT:-9000}:9000"
+      - "127.0.0.1:${MOCTES_MINIO_CONSOLE_PORT:-9001}:9001"
+
+    volumes:
+      - moctes_minio_data:/data
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  clamav:
+    image: clamav/clamav@sha256:78810772a92b4a9168115bc6b2e0ffd702640893b9577f8c3d0432762d2655c4
+    container_name: moctes-clamav
+    restart: unless-stopped
+
+    ports:
+      - "127.0.0.1:${MOCTES_CLAMAV_PORT:-3310}:3310"
+
+    volumes:
+      - moctes_clamav_data:/var/lib/clamav
+
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/clamdcheck.sh"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
+
 volumes:
   moctes_postgres_data:
+  moctes_minio_data:
+  moctes_clamav_data:

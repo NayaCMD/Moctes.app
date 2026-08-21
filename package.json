@@ -7,10 +7,15 @@
     "backend"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev --workspace=frontend\" \"npm run start:dev --workspace=backend\"",
+    "dev": "concurrently \"npm run dev --workspace=frontend\" \"npm run start:dev --workspace=backend\" \"npm run start:worker:dev --workspace=backend\"",
     "dev:frontend": "npm run dev --workspace=frontend",
     "dev:backend": "npm run start:dev --workspace=backend",
+    "db:up": "docker compose up -d --wait postgres minio clamav",
+    "db:migrate": "npm run prisma:migrate:deploy --workspace=backend",
     "build": "npm run build --workspace=frontend && npm run build --workspace=backend",
+    "test:visual": "npm run test:visual --workspace=frontend",
+    "test:visual:update": "npm run test:visual:update --workspace=frontend",
+    "test:visual:report": "npm run test:visual:report --workspace=frontend",
     "lint": "npm run lint:fast && npm run lint:full",
     "lint:fast": "oxlint .",
     "lint:full": "npm run lint:full --workspace=frontend && npm run lint:full --workspace=backend",
@@ -32,6 +37,9 @@
     "jsdom": "^29.1.1",
     "lint-staged": "^17.2.0",
     "oxlint": "^1.74.0"
+  },
+  "overrides": {
+    "nanoid": "3.3.18"
   },
   "config": {
     "commitizen": {

@@ -4,6 +4,9 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppController } from './../src/app.controller';
 import { AppService } from './../src/app.service';
+import { PrismaService } from './../src/prisma/prisma.service';
+import { ObjectStorageService } from './../src/object-storage/object-storage.service';
+import { ClamAvService } from './../src/assets/clamav.service';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
@@ -11,7 +14,21 @@ describe('AppController (e2e)', () => {
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       controllers: [AppController],
-      providers: [AppService],
+      providers: [
+        AppService,
+        {
+          provide: PrismaService,
+          useValue: { $queryRaw: jest.fn().mockResolvedValue([1]) },
+        },
+        {
+          provide: ObjectStorageService,
+          useValue: { checkHealth: jest.fn().mockResolvedValue(undefined) },
+        },
+        {
+          provide: ClamAvService,
+          useValue: { checkHealth: jest.fn().mockResolvedValue(undefined) },
+        },
+      ],
     }).compile();
 
     app = moduleFixture.createNestApplication();
@@ -35,6 +52,22 @@ describe('AppController (e2e)', () => {
           application: 'MOCTES API',
         });
         expect(typeof body.timestamp).toBe('string');
+      });
+  });
+
+  it('/api/health/ready (GET)', () => {
+    return request(app.getHttpServer())
+      .get('/api/health/ready')
+      .expect(200)
+      .expect((response) => {
+        expect(response.body).toMatchObject({
+          status: 'ready',
+          dependencies: {
+            postgres: 'ok',
+            objectStorage: 'ok',
+            antivirus: 'ok',
+          },
+        });
       });
   });
 

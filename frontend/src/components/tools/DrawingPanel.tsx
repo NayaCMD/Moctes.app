@@ -31,7 +31,7 @@ export function DrawingPanel({
   } as CSSProperties;
 
   return (
-    <div className="drawing-panel" aria-label="Caneta e regua">
+    <div className="drawing-panel" aria-label="Caneta e régua">
       <div className="tool-tabs equal" role="tablist" aria-label="Ferramenta">
         <button
           type="button"
@@ -127,7 +127,7 @@ export function DrawingPanel({
               checked={ruler.visible}
               onChange={(event) => onRulerChange({ visible: event.target.checked })}
             />
-            Mostrar regua
+            Mostrar régua
           </label>
           <label>
             Angulo: {ruler.rotation} graus
@@ -157,7 +157,7 @@ export function DrawingPanel({
               Redefinir
             </button>
           </div>
-          <p className="tool-panel-note">Arraste a regua para mover e use a alca para girar.</p>
+          <p className="tool-panel-note">Arraste a régua para mover e use a alça para girar.</p>
         </section>
       )}
     </div>

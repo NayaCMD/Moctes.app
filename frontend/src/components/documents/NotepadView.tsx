@@ -18,7 +18,7 @@ export function NotepadView({ document }: NotepadViewProps) {
         <DocumentPage
           page={page}
           className="notepad-paper"
-          label={page.title ?? "Folha do bloco de notas"}
+          label={page.title ?? "Página do bloco de notas"}
         />
       </div>
     </article>

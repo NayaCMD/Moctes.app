@@ -17,7 +17,7 @@ describe("ToolPopover", () => {
     const dialog = screen.getByRole("dialog", { name: "Emojis" });
     expect(dialog).toBeInTheDocument();
     expect(dialog).toHaveAttribute("data-panel", "emoji");
-    expect(dialog).toHaveStyle({ width: "360px" });
+    expect(dialog).toHaveStyle({ width: "400px" });
     expect(dialog.style.getPropertyValue("--tool-popover-arrow-left")).not.toBe("");
   });
 

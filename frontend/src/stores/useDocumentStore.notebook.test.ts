@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { MoctesDocument } from "../types/document.types";
 import type { PageElement } from "../types/element.types";
 import { resetStores } from "../test/helpers/resetStores";
-import { buildNotebookSurfaces } from "../utils/notebookSurfaces.utils";
+import { buildNotebookSurfaces, getPagesInSection } from "../utils/notebookSurfaces.utils";
 import { validateNotebookDocument } from "../utils/notebookValidation.utils";
 import { reconcileNotebookDocument } from "../utils/notebookMigration.utils";
 import { useDocumentStore } from "./useDocumentStore";
@@ -21,22 +21,18 @@ function assertNotebookInvariants(document: MoctesDocument) {
   const validation = validateNotebookDocument(document);
   expect(validation.errors).toEqual([]);
 
-  const sectionPageIds = document.sections?.flatMap((section) =>
-    section.pages.map((page) => page.id),
-  ) ?? [];
   const documentPageIds = document.pages.map((page) => page.id);
   const dividerIds = document.sections?.map((section) => section.divider.id) ?? [];
 
-  expect(new Set(sectionPageIds).size).toBe(sectionPageIds.length);
-  expect([...sectionPageIds].sort()).toEqual([...documentPageIds].sort());
+  expect(new Set(documentPageIds).size).toBe(documentPageIds.length);
   expect(document.dividers.map((divider) => divider.id)).toEqual(dividerIds);
   expect(buildNotebookSurfaces(document).some((surface) => surface.id === document.activeSurfaceId)).toBe(true);
   expect(document.pages.some((page) => page.id === document.activePageId)).toBe(true);
 
   for (const section of document.sections ?? []) {
-    for (const page of section.pages) {
-      expect(page.dividerId).toBe(section.divider.id);
-      expect(document.pages.find((item) => item.id === page.id)).toBe(page);
+    for (const page of getPagesInSection(document, section.id)) {
+      expect(page.sectionId).toBe(section.id);
+      expect(page.dividerId).toBeUndefined();
     }
   }
 }
@@ -87,7 +83,7 @@ describe("useDocumentStore notebook v2 structural actions", () => {
 
     expect(section).toBeDefined();
     expect(section?.title).toBe("Banco");
-    expect(section?.pages).toHaveLength(1);
+    expect(getPagesInSection(document, section!.id)).toHaveLength(1);
     expect(document.activeSurfaceId).toBe(section?.divider.id);
     expect(useEditorStore.getState().undoStack).toHaveLength(1);
     assertNotebookInvariants(document);
@@ -102,7 +98,7 @@ describe("useDocumentStore notebook v2 structural actions", () => {
     const document = activeNotebook();
     const section = document.sections?.find((item) => item.id === sectionId);
 
-    expect(section?.pages).toHaveLength(0);
+    expect(getPagesInSection(document, section!.id)).toHaveLength(0);
     expect(document.activeSurfaceId).toBe(section?.divider.id);
     assertNotebookInvariants(document);
   });
@@ -127,13 +123,15 @@ describe("useDocumentStore notebook v2 structural actions", () => {
     const documentId = activeNotebook().id;
     const secondSectionId = store.addSection(documentId, { title: "Segundo" });
     const before = activeNotebook();
-    const secondPageIds = before.sections?.find((section) => section.id === secondSectionId)?.pages.map((page) => page.id);
+    const secondPageIds = getPagesInSection(before, secondSectionId!);
 
     expect(useDocumentStore.getState().reorderSections(documentId, 1, 0)).toBe(true);
     const after = activeNotebook();
 
     expect(after.sections?.[0].id).toBe(secondSectionId);
-    expect(after.sections?.[0].pages.map((page) => page.id)).toEqual(secondPageIds);
+    expect(getPagesInSection(after, secondSectionId!).map((page) => page.id)).toEqual(
+      secondPageIds.map((page) => page.id),
+    );
     assertNotebookInvariants(after);
   });
 
@@ -148,6 +146,21 @@ describe("useDocumentStore notebook v2 structural actions", () => {
     expect(updated.divider.color).toBe("#123456");
     expect(updated.divider.tabColor).toBe(originalTabColor);
     assertNotebookInvariants(activeNotebook());
+  });
+
+  it("updateNotebookDivider persiste material e intensidade da divisória", () => {
+    const document = activeNotebook();
+    const section = document.sections![0];
+
+    expect(useDocumentStore.getState().updateNotebookDivider(document.id, section.id, {
+      material: "linen",
+      textureIntensity: 28,
+    })).toBe(true);
+
+    expect(activeNotebook().sections![0].divider).toMatchObject({
+      material: "linen",
+      textureIntensity: 28,
+    });
   });
 
   it("removeSection com delete-pages nao deixa paginas orfas", () => {
@@ -167,7 +180,7 @@ describe("useDocumentStore notebook v2 structural actions", () => {
     const documentId = activeNotebook().id;
     const targetSectionId = activeNotebook().sections![0].id;
     const movingSectionId = store.addSection(documentId, { title: "Mover" });
-    const movingPageId = activeNotebook().sections?.find((section) => section.id === movingSectionId)?.pages[0].id;
+    const movingPageId = getPagesInSection(activeNotebook(), movingSectionId!)[0]?.id;
     const element = addMarkerElement(movingPageId!, "moved");
 
     expect(store.removeSection(documentId, movingSectionId!, { mode: "move-pages", targetSectionId })).toBe(true);
@@ -175,7 +188,7 @@ describe("useDocumentStore notebook v2 structural actions", () => {
     const movedPage = document.pages.find((page) => page.id === movingPageId);
 
     expect(movedPage?.elements.some((item) => item.id === element.id)).toBe(true);
-    expect(document.sections?.find((section) => section.id === targetSectionId)?.pages.some((page) => page.id === movingPageId)).toBe(true);
+    expect(getPagesInSection(document, targetSectionId).some((page) => page.id === movingPageId)).toBe(true);
     assertNotebookInvariants(document);
   });
 
@@ -188,15 +201,15 @@ describe("useDocumentStore notebook v2 structural actions", () => {
     assertNotebookInvariants(activeNotebook());
   });
 
-  it("addPageToSection atualiza pages, sections e dividerId", () => {
+  it("addPageToSection atualiza pages e sectionId", () => {
     const document = activeNotebook();
     const section = document.sections![0];
     const pageId = useDocumentStore.getState().addPageToSection(document.id, section.id);
     const updated = activeNotebook();
     const page = updated.pages.find((item) => item.id === pageId);
 
-    expect(page?.dividerId).toBe(section.divider.id);
-    expect(updated.sections?.[0].pages.some((item) => item.id === pageId)).toBe(true);
+    expect(page?.sectionId).toBe(section.id);
+    expect(page?.dividerId).toBeUndefined();
     expect(updated.activePageId).toBe(pageId);
     expect(updated.activeSurfaceId).toBe(pageId);
     assertNotebookInvariants(updated);
@@ -211,10 +224,8 @@ describe("useDocumentStore notebook v2 structural actions", () => {
 
     expect(store.movePageToSection(documentId, pageId, targetSectionId!)).toBe(true);
     const document = activeNotebook();
-    const sectionPageIds = document.sections?.flatMap((section) => section.pages.map((page) => page.id)) ?? [];
-
     expect(document.pages.find((page) => page.id === pageId)?.elements.some((item) => item.id === element.id)).toBe(true);
-    expect(sectionPageIds.filter((id) => id === pageId)).toHaveLength(1);
+    expect(document.pages.filter((page) => page.id === pageId)).toHaveLength(1);
     assertNotebookInvariants(document);
   });
 
@@ -224,14 +235,15 @@ describe("useDocumentStore notebook v2 structural actions", () => {
     const newPageId = useDocumentStore.getState().addPageToSection(document.id, section.id);
     const element = addMarkerElement(newPageId!, "reordered");
 
-    const lastIndex = activeNotebook().sections![0].pages.length - 1;
+    const lastIndex = getPagesInSection(activeNotebook(), section.id).length - 1;
 
     expect(useDocumentStore.getState().reorderPagesWithinSection(document.id, section.id, lastIndex, 0)).toBe(true);
-    const updatedSection = activeNotebook().sections![0];
+    const updatedDocument = activeNotebook();
+    const updatedPages = getPagesInSection(updatedDocument, section.id);
 
-    expect(updatedSection.pages[0].id).toBe(newPageId);
-    expect(updatedSection.pages[0].elements.some((item) => item.id === element.id)).toBe(true);
-    assertNotebookInvariants(activeNotebook());
+    expect(updatedPages[0].id).toBe(newPageId);
+    expect(updatedPages[0].elements.some((item) => item.id === element.id)).toBe(true);
+    assertNotebookInvariants(updatedDocument);
   });
 
   it("removePageFromSection escolhe activeSurfaceId valida", () => {
@@ -257,7 +269,7 @@ describe("useDocumentStore notebook v2 structural actions", () => {
     expect(store.goToSection(section.id, document.id)).toBe(true);
     expect(activeNotebook().activeSurfaceId).toBe(section.divider.id);
     expect(store.goToNextSurface(document.id)).toBe(true);
-    expect(activeNotebook().activeSurfaceId).toBe(section.pages[0].id);
+    expect(activeNotebook().activeSurfaceId).toBe(getPagesInSection(document, section.id)[0].id);
     expect(store.goToPreviousSurface(document.id)).toBe(true);
     expect(activeNotebook().activeSurfaceId).toBe(section.divider.id);
     expect(store.goToPreviousSurface(document.id)).toBe(false);
@@ -270,7 +282,7 @@ describe("useDocumentStore notebook v2 structural actions", () => {
     const secondSectionId = store.addSection(documentId, { title: "Proxima" });
     const firstSection = activeNotebook().sections![0];
 
-    expect(store.goToPage(firstSection.pages.at(-1)!.id, documentId)).toBe(true);
+    expect(store.goToPage(getPagesInSection(activeNotebook(), firstSection.id).at(-1)!.id, documentId)).toBe(true);
     expect(store.goToNextSurface(documentId)).toBe(true);
     expect(activeNotebook().activeSurfaceId).toBe(activeNotebook().sections?.find((section) => section.id === secondSectionId)?.divider.id);
     expect(store.goToLastSurface(documentId)).toBe(true);
@@ -281,7 +293,7 @@ describe("useDocumentStore notebook v2 structural actions", () => {
     const store = useDocumentStore.getState();
     const document = activeNotebook();
     const section = document.sections![0];
-    const pageId = section.pages.at(-1)!.id;
+    const pageId = getPagesInSection(document, section.id).at(-1)!.id;
 
     expect(store.setActiveSurface(section.divider.id, document.id)).toBe(true);
     expect(store.setActiveSurface(pageId, document.id)).toBe(true);

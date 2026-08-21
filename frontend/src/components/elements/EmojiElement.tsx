@@ -29,16 +29,28 @@ export function EmojiElement({ element }: EmojiElementProps) {
     return null;
   }
 
+  const { asset, emoji, label } = element.content;
+
+  if (asset?.kind === "image" && asset.src) {
+    return (
+      <span ref={containerRef} className="page-emoji-element" title={label}>
+        <img className="page-emoji-custom-asset" src={asset.src} alt={label ?? "Emoji"} />
+      </span>
+    );
+  }
+
   return (
     <span
       ref={containerRef}
-      className="page-emoji-element"
+      className="page-emoji-element emoji-glyph"
+      title={label}
       style={{
         ...element.style.text,
         fontSize,
+        fontFamily: asset?.fontFamily ?? undefined,
       }}
     >
-      {element.content.emoji}
+      {emoji}
     </span>
   );
 }

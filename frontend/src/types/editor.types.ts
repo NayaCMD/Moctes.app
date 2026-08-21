@@ -1,5 +1,6 @@
 export type EditorTool =
   | "text"
+  | "checklist"
   | "emojis"
   | "stickers"
   | "image"
@@ -23,7 +24,15 @@ export type ActiveToolPanel =
   | "erase"
   | null;
 
-export type EditorMode = "select" | "text" | "comment" | "erase" | "erase-area" | "draw" | "ruler";
+export type EditorMode =
+  | "select"
+  | "text"
+  | "checklist"
+  | "comment"
+  | "erase"
+  | "erase-area"
+  | "draw"
+  | "ruler";
 
 export type ZoomMode = "fit" | "manual";
 

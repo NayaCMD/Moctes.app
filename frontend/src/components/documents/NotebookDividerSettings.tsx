@@ -1,6 +1,10 @@
 import { type FormEvent, useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
-import type { NotebookDividerUpdate, NotebookSection } from "../../types/notebook.types";
+import type {
+  NotebookDividerUpdate,
+  NotebookMaterial,
+  NotebookSection,
+} from "../../types/notebook.types";
 import {
   clampNotebookTabPosition,
   NOTEBOOK_TAB_MAX_POSITION,
@@ -28,6 +32,12 @@ export function NotebookDividerSettings({
   const [tabPosition, setTabPosition] = useState(
     clampNotebookTabPosition(section?.divider.tabPosition ?? 0),
   );
+  const [material, setMaterial] = useState<NotebookMaterial>(
+    section?.divider.material ?? "smooth",
+  );
+  const [textureIntensity, setTextureIntensity] = useState(
+    section?.divider.textureIntensity ?? 12,
+  );
 
   useEffect(() => {
     if (!open) {
@@ -54,6 +64,8 @@ export function NotebookDividerSettings({
       tabColor,
       textColor,
       tabPosition: clampNotebookTabPosition(tabPosition),
+      material,
+      textureIntensity,
     });
   };
 
@@ -89,6 +101,28 @@ export function NotebookDividerSettings({
             value={textColor}
             onChange={(event) => setTextColor(event.target.value)}
           />
+        </label>
+        <label className="notebook-form-field">
+          <span>Textura</span>
+          <select
+            value={material}
+            onChange={(event) => setMaterial(event.target.value as NotebookMaterial)}
+          >
+            <option value="smooth">Lisa</option>
+            <option value="linen">Tecido</option>
+            <option value="speckled">Granulada</option>
+          </select>
+        </label>
+        <label className="notebook-form-field">
+          <span>Intensidade da textura</span>
+          <input
+            type="range"
+            min="0"
+            max="40"
+            value={textureIntensity}
+            onChange={(event) => setTextureIntensity(Number(event.target.value))}
+          />
+          <output>{textureIntensity}%</output>
         </label>
         <label className="notebook-form-field">
           <span>Posição da aba</span>

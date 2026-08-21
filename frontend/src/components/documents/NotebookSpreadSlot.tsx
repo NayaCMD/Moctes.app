@@ -26,7 +26,7 @@ export function NotebookSpreadSlot({
       <section
         className="notebook-spread-slot notebook-guard-page"
         data-side={side}
-        aria-label="Folha de guarda"
+        aria-label="Página de guarda"
         aria-hidden="true"
       />
     );

@@ -1,6 +1,5 @@
 import { AlignCenter, AlignLeft, AlignRight, Bold, Italic, Underline } from "lucide-react";
 import { useDocumentStore } from "../../stores/useDocumentStore";
-import { useEditorStore } from "../../stores/useEditorStore";
 import type { PageElement, TextElementStyle } from "../../types/element.types";
 import type { PostItAppearance } from "../../types/postIt.types";
 
@@ -33,7 +32,6 @@ export function TextToolbar() {
   const selectedElementId = useDocumentStore((state) => state.selectedElementId);
   const updateElement = useDocumentStore((state) => state.updateElement);
   const updateElementStyle = useDocumentStore((state) => state.updateElementStyle);
-  const recordHistory = useEditorStore((state) => state.recordHistory);
   const element = findSelectedEditableElement(documents, selectedElementId);
 
   if (!element || element.locked) {
@@ -43,7 +41,6 @@ export function TextToolbar() {
   const textStyle = element.style.text ?? {};
   const postItContent = element.content.kind === "post-it" ? element.content : null;
   const updateTextStyle = (updates: TextElementStyle) => {
-    recordHistory(documents);
     updateElementStyle(element.id, {
       text: { ...textStyle, ...updates },
     });
@@ -53,7 +50,6 @@ export function TextToolbar() {
       return;
     }
     const appearance = { ...postItContent.appearance, ...updates };
-    recordHistory(documents);
     updateElement(element.id, {
       lockAspectRatio: appearance.preserveAspectRatio,
       content: {
@@ -103,7 +99,7 @@ export function TextToolbar() {
             onChange={(event) => updatePostItAppearance({ backgroundColor: event.target.value })}
           />
           <input
-            aria-label="Cor do padrao do post-it"
+            aria-label="Cor do padrão do post-it"
             type="color"
             value={postItContent.appearance.patternColor}
             onChange={(event) => updatePostItAppearance({ patternColor: event.target.value })}
@@ -111,7 +107,7 @@ export function TextToolbar() {
           <label className="text-toolbar-slider">
             Padrao
             <input
-              aria-label="Opacidade do padrao"
+              aria-label="Opacidade do padrão"
               type="range"
               min={0}
               max={1}

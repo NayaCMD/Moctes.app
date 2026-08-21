@@ -77,7 +77,7 @@ export function MovePageToSectionMenu({
         ref={buttonRef}
         type="button"
         className="notebook-navigation-button"
-        aria-label="Mover folha para seção"
+        aria-label="Mover página para seção"
         aria-haspopup="menu"
         aria-expanded={open}
         disabled={disabled}
@@ -97,7 +97,7 @@ export function MovePageToSectionMenu({
             ref={menuRef}
             className="notebook-section-menu"
             role="menu"
-            aria-label="Mover folha para seção"
+            aria-label="Mover página para seção"
             style={{ top: position.top, left: position.left }}
           >
             {sections.map((section) => {

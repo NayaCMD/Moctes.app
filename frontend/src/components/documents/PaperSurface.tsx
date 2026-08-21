@@ -7,6 +7,7 @@ import type {
 } from "react";
 import type { Page } from "../../types/page.types";
 import type { PaperType } from "../../types/theme.types";
+import { getPageAppearance } from "../../utils/paperAppearance.utils";
 
 interface PaperSurfaceProps {
   page: Page;
@@ -39,22 +40,6 @@ function getPaperClass(paperType: PaperType): string {
 
     case "blank":
       return "paper-pattern-plain";
-  }
-}
-
-function getDefaultPatternSize(paperType: PaperType): number {
-  switch (paperType) {
-    case "dotted":
-      return 18;
-
-    case "lined":
-      return 25;
-
-    case "grid":
-      return 22;
-
-    case "blank":
-      return 22;
   }
 }
 
@@ -121,15 +106,18 @@ export function PaperSurface({
     );
   };
 
+  const appearance = getPageAppearance(page);
   const style = {
-    "--user-paper-color": page.paperColor,
+    "--user-paper-color": appearance.paperColor,
     "--paper-pattern-color":
-      page.patternColor ?? "#72a0b9",
-    "--paper-pattern-opacity": `${page.patternOpacity ?? 14
-      }%`,
-    "--paper-pattern-size": `${page.patternSize ??
-      getDefaultPatternSize(page.paperType)
-      }px`,
+      appearance.patternColor,
+    "--paper-pattern-opacity": `${appearance.patternOpacity}%`,
+    "--paper-pattern-size": `${appearance.patternSize}px`,
+    "--paper-texture-opacity": `${appearance.textureIntensity}%`,
+    "--paper-margin-top": `${appearance.margins.top}%`,
+    "--paper-margin-right": `${appearance.margins.right}%`,
+    "--paper-margin-bottom": `${appearance.margins.bottom}%`,
+    "--paper-margin-left": `${appearance.margins.left}%`,
   } as CSSProperties;
 
   return (
@@ -143,11 +131,15 @@ export function PaperSurface({
       data-document-id={page.documentId}
       data-editor-mode={editorMode}
       data-active-page={active}
+      data-paper-texture={appearance.paperTexture}
+      data-margin-guides={appearance.margins.visible}
       tabIndex={-1}
       style={style}
       onPointerDown={handlePointerDown}
       onClick={handleClick}
     >
+      <span className="paper-texture-layer" aria-hidden="true" />
+      <span className="paper-margin-guide" aria-hidden="true" />
       {children}
     </section>
   );

@@ -3,7 +3,10 @@ import { useEditorStore } from "../../stores/useEditorStore";
 export function AssetDragPreview() {
   const assetDrag = useEditorStore((state) => state.assetDrag);
 
-  if (assetDrag.status !== "dragging" || !assetDrag.previewSrc) {
+  if (
+    assetDrag.status !== "dragging" ||
+    (!assetDrag.previewSrc && !assetDrag.previewText)
+  ) {
     return null;
   }
 
@@ -17,7 +20,11 @@ export function AssetDragPreview() {
       }}
       aria-hidden="true"
     >
-      <img src={assetDrag.previewSrc} alt={assetDrag.previewAlt ?? ""} />
+      {assetDrag.previewSrc ? (
+        <img src={assetDrag.previewSrc} alt={assetDrag.previewAlt ?? ""} />
+      ) : (
+        <span className="asset-drag-preview-emoji">{assetDrag.previewText}</span>
+      )}
     </div>
   );
 }

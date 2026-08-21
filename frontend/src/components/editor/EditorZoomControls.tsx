@@ -19,33 +19,46 @@ export function EditorZoomControls({
   onFitToWindow,
   onResetZoom,
 }: EditorZoomControlsProps) {
+  const zoomFromCurrentScale = zoomMode === "fit" ? scale : zoom;
+  const zoomPercentage = Math.round(scale * 100);
+
   return (
     <div className="editor-zoom-controls" aria-label="Zoom do editor">
       <button
         type="button"
         aria-label="Diminuir zoom"
-        onClick={() => onZoomChange(zoom - EDITOR_ZOOM_STEP)}
+        data-tooltip="Diminuir zoom"
+        onClick={() => onZoomChange(zoomFromCurrentScale - EDITOR_ZOOM_STEP)}
       >
-        <Minus size={13} />
+        <Minus size={15} aria-hidden="true" />
       </button>
-      <output aria-label="Zoom atual">{Math.round(scale * 100)}%</output>
+      <button
+        type="button"
+        className="editor-zoom-value"
+        aria-label={`Zoom atual ${zoomPercentage}%. Redefinir para 100%`}
+        data-tooltip="Redefinir para 100%"
+        onClick={onResetZoom}
+      >
+        {zoomPercentage}%
+      </button>
       <button
         type="button"
         aria-label="Aumentar zoom"
-        onClick={() => onZoomChange(zoom + EDITOR_ZOOM_STEP)}
+        data-tooltip="Aumentar zoom"
+        onClick={() => onZoomChange(zoomFromCurrentScale + EDITOR_ZOOM_STEP)}
       >
-        <Plus size={13} />
+        <Plus size={15} aria-hidden="true" />
       </button>
       <button
         type="button"
+        className="editor-zoom-fit"
         aria-label="Ajustar à janela"
         data-active={zoomMode === "fit"}
+        data-tooltip="Ajustar à janela"
         onClick={onFitToWindow}
       >
-        <Maximize2 size={13} />
-      </button>
-      <button type="button" className="editor-zoom-reset" onClick={onResetZoom}>
-        100%
+        <Maximize2 size={15} aria-hidden="true" />
+        <span>Ajustar</span>
       </button>
     </div>
   );

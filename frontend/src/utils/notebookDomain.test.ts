@@ -4,11 +4,10 @@ import type { PageElement } from "../types/element.types";
 import type { NotebookSection } from "../types/notebook.types";
 import type { Page } from "../types/page.types";
 import { createEmptyDocument } from "./document.utils";
-import {
-  migrateDocumentToSchemaV2,
-} from "./notebookMigration.utils";
+import { migrateDocumentToSchemaV3 } from "./notebookMigration.utils";
 import {
   buildNotebookSurfaces,
+  getPagesInSection,
   getSectionByPageId,
   getSurfaceById,
 } from "./notebookSurfaces.utils";
@@ -85,27 +84,28 @@ function legacyNotebook(overrides: Partial<MoctesDocument> = {}): MoctesDocument
   };
 }
 
-describe("notebook v2 domain", () => {
-  it("cria um documento v2 valido", () => {
+describe("notebook v3 domain", () => {
+  it("cria um documento v3 valido", () => {
     const document = createEmptyDocument("notebook");
 
-    expect(document.schemaVersion).toBe(2);
+    expect(document.schemaVersion).toBe(3);
     expect(document.cover).toMatchObject({ color: "#bde4eb", borderColor: "#8dcbd7" });
     expect(document.sections).toHaveLength(1);
     expect(document.sections?.[0].divider).toBeDefined();
-    expect(document.sections?.[0].pages).toHaveLength(1);
+    expect(getPagesInSection(document, document.sections![0].id)).toHaveLength(1);
     expect(document.activeSurfaceId).toBe(document.activePageId);
     expect(validateNotebookDocument(document).valid).toBe(true);
   });
 
   it("migra documento antigo com paginas e divisorias preservando IDs e elementos", () => {
     const legacy = legacyNotebook();
-    const migrated = migrateDocumentToSchemaV2(legacy);
+    const migrated = migrateDocumentToSchemaV3(legacy);
 
-    expect(migrated.schemaVersion).toBe(2);
+    expect(migrated.schemaVersion).toBe(3);
     expect(migrated.pages.map((item) => item.id)).toEqual(["page-react", "page-css", "page-node"]);
     expect(migrated.pages[0].elements[0].id).toBe("el-react");
-    expect(migrated.pages[0].dividerId).toBe("divider-front");
+    expect(migrated.pages[0].sectionId).toBe("section-divider-front");
+    expect(migrated.pages[0].dividerId).toBeUndefined();
     expect(migrated.sections?.map((section) => section.title)).toEqual(["Front-end", "Back-end"]);
     expect(migrated.activeSurfaceId).toBe("page-css");
     expect(validateNotebookDocument(migrated).valid).toBe(true);
@@ -116,25 +116,29 @@ describe("notebook v2 domain", () => {
       pages: [page("page-loose", 1), page("page-front", 2, "divider-front")],
       activePageId: "page-loose",
     });
-    const migrated = migrateDocumentToSchemaV2(legacy);
+    const migrated = migrateDocumentToSchemaV3(legacy);
     const defaultSection = migrated.sections?.find((section) => section.title === "Anotações");
 
-    expect(defaultSection?.pages.map((item) => item.id)).toEqual(["page-loose"]);
-    expect(migrated.pages.find((item) => item.id === "page-loose")?.dividerId).toBe(defaultSection?.divider.id);
+    expect(getPagesInSection(migrated, defaultSection!.id).map((item) => item.id)).toEqual([
+      "page-loose",
+    ]);
+    expect(migrated.pages.find((item) => item.id === "page-loose")?.sectionId).toBe(
+      defaultSection?.id,
+    );
     expect(validateNotebookDocument(migrated).valid).toBe(true);
   });
 
   it("nao duplica paginas e a migracao e idempotente", () => {
-    const firstMigration = migrateDocumentToSchemaV2(legacyNotebook());
-    const secondMigration = migrateDocumentToSchemaV2(firstMigration);
-    const pageIds = firstMigration.sections?.flatMap((section) => section.pages.map((item) => item.id)) ?? [];
+    const firstMigration = migrateDocumentToSchemaV3(legacyNotebook());
+    const secondMigration = migrateDocumentToSchemaV3(firstMigration);
+    const pageIds = firstMigration.pages.map((item) => item.id);
 
     expect(new Set(pageIds).size).toBe(pageIds.length);
     expect(secondMigration).toEqual(firstMigration);
   });
 
   it("gera superficies com divisoria antes das paginas da secao", () => {
-    const migrated = migrateDocumentToSchemaV2(legacyNotebook());
+    const migrated = migrateDocumentToSchemaV3(legacyNotebook());
     const surfaces = buildNotebookSurfaces(migrated);
 
     expect(surfaces.map((surface) => `${surface.kind}:${surface.id}`)).toEqual([
@@ -149,22 +153,21 @@ describe("notebook v2 domain", () => {
   });
 
   it("valida activeSurfaceId existente", () => {
-    const migrated = migrateDocumentToSchemaV2(legacyNotebook({ activePageId: "missing-page" }));
+    const migrated = migrateDocumentToSchemaV3(legacyNotebook({ activePageId: "missing-page" }));
 
-    expect(migrated.activeSurfaceId).toBe("divider-front");
+    expect(migrated.activeSurfaceId).toBe("page-react");
     expect(validateNotebookDocument({ ...migrated, activeSurfaceId: "missing-surface" }).errors).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: "INVALID_ACTIVE_SURFACE" })]),
     );
   });
 
   it("rejeita paginas orfas", () => {
-    const migrated = migrateDocumentToSchemaV2(legacyNotebook());
+    const migrated = migrateDocumentToSchemaV3(legacyNotebook());
     const invalid = {
       ...migrated,
-      sections: migrated.sections?.map((section) => ({
-        ...section,
-        pages: section.pages.filter((item) => item.id !== "page-node"),
-      })),
+      pages: migrated.pages.map((item) =>
+        item.id === "page-node" ? { ...item, sectionId: "missing-section" } : item,
+      ),
     };
 
     expect(validateNotebookDocument(invalid).errors).toEqual(
@@ -172,14 +175,12 @@ describe("notebook v2 domain", () => {
     );
   });
 
-  it("rejeita paginas duplicadas entre secoes", () => {
-    const migrated = migrateDocumentToSchemaV2(legacyNotebook());
+  it("rejeita paginas duplicadas", () => {
+    const migrated = migrateDocumentToSchemaV3(legacyNotebook());
     const duplicatePage = migrated.pages[0];
     const invalid = {
       ...migrated,
-      sections: migrated.sections?.map((section, index) =>
-        index === 1 ? { ...section, pages: [...section.pages, duplicatePage] } : section,
-      ),
+      pages: [...migrated.pages, duplicatePage],
     };
 
     expect(validateNotebookDocument(invalid).errors).toEqual(
@@ -188,7 +189,7 @@ describe("notebook v2 domain", () => {
   });
 
   it("rejeita IDs duplicados", () => {
-    const migrated = migrateDocumentToSchemaV2(legacyNotebook());
+    const migrated = migrateDocumentToSchemaV3(legacyNotebook());
     const invalid = {
       ...migrated,
       sections: migrated.sections?.map((section, index) =>
@@ -202,11 +203,10 @@ describe("notebook v2 domain", () => {
   });
 
   it("rejeita secao sem divisoria", () => {
-    const migrated = migrateDocumentToSchemaV2(legacyNotebook());
+    const migrated = migrateDocumentToSchemaV3(legacyNotebook());
     const brokenSection = {
       id: "section-broken",
       title: "Quebrada",
-      pages: [],
     } as unknown as NotebookSection;
     const invalid = {
       ...migrated,
@@ -219,7 +219,7 @@ describe("notebook v2 domain", () => {
   });
 
   it("rejeita divisoria solta fora das secoes", () => {
-    const migrated = migrateDocumentToSchemaV2(legacyNotebook());
+    const migrated = migrateDocumentToSchemaV3(legacyNotebook());
     const invalid = {
       ...migrated,
       dividers: [...migrated.dividers, divider("divider-loose", "Solta", 3)],
@@ -231,7 +231,7 @@ describe("notebook v2 domain", () => {
   });
 
   it("mantem campos antigos utilizaveis durante a transicao", () => {
-    const migrated = migrateDocumentToSchemaV2(legacyNotebook());
+    const migrated = migrateDocumentToSchemaV3(legacyNotebook());
 
     expect(migrated.pages).toHaveLength(3);
     expect(migrated.dividers.map((item) => item.id)).toEqual(["divider-front", "divider-back"]);

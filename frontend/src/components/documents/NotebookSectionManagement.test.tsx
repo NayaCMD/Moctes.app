@@ -5,7 +5,10 @@ import { useDocumentStore } from "../../stores/useDocumentStore";
 import { useEditorStore } from "../../stores/useEditorStore";
 import { resetStores } from "../../test/helpers/resetStores";
 import type { MoctesDocument } from "../../types/document.types";
-import { getSectionByPageId } from "../../utils/notebookSurfaces.utils";
+import {
+  getPagesInSection,
+  getSectionByPageId,
+} from "../../utils/notebookSurfaces.utils";
 import { NotebookView } from "./NotebookView";
 import { NotepadView } from "./NotepadView";
 
@@ -89,7 +92,7 @@ describe("Notebook section management", () => {
     const document = getNotebookDocument();
     const section = document.sections?.find((item) => item.title === "Matemática");
     expect(section).toBeDefined();
-    expect(section?.pages).toHaveLength(1);
+    expect(getPagesInSection(document, section!.id)).toHaveLength(1);
     expect(section?.divider.color).toBe("#ffccdd");
     expect(document.activeSurfaceId).toBe(section?.divider.id);
     expect(globalThis.document.querySelector(".notebook-leaf")).not.toBeInTheDocument();
@@ -233,7 +236,7 @@ describe("Notebook section management", () => {
     useEditorStore.getState().beginNotebookTransition({
       documentId: document.id,
       fromSurfaceId: section.divider.id,
-      toSurfaceId: section.pages[0].id,
+      toSurfaceId: getPagesInSection(document, section.id)[0].id,
       direction: "forward",
       phase: "running",
     });
@@ -314,17 +317,19 @@ describe("Notebook section management", () => {
     await openSectionMenu("Banco");
     await user.click(screen.getByRole("menuitem", { name: "Excluir seção" }));
     expect(screen.getByLabelText("Seção de destino")).not.toHaveTextContent("Banco");
-    await user.click(screen.getByLabelText("Excluir a seção e suas folhas"));
+    await user.click(screen.getByLabelText("Excluir a seção e suas páginas"));
     await user.click(screen.getByRole("button", { name: "Excluir seção" }));
     expect(getNotebookDocument().sections?.some((section) => section.title === "Banco")).toBe(false);
 
     await openSectionMenu("UI");
     await user.click(screen.getByRole("menuitem", { name: "Excluir seção" }));
-    await user.click(screen.getByLabelText("Mover folhas para outra seção"));
+    await user.click(screen.getByLabelText("Mover páginas para outra seção"));
     await user.selectOptions(screen.getByLabelText("Seção de destino"), getNotebookDocument().sections?.[0].id ?? "");
-    const movingPageIds = getNotebookDocument()
-      .sections?.find((section) => section.title === "UI")
-      ?.pages.map((page) => page.id) ?? [];
+    const currentDocument = getNotebookDocument();
+    const movingSection = currentDocument.sections?.find((section) => section.title === "UI");
+    const movingPageIds = movingSection
+      ? getPagesInSection(currentDocument, movingSection.id).map((page) => page.id)
+      : [];
     await user.click(screen.getByRole("button", { name: "Excluir seção" }));
 
     const updatedDocument = getNotebookDocument();
@@ -349,14 +354,15 @@ describe("Notebook section management", () => {
     useDocumentStore.getState().goToSection(firstSectionId, documentId);
     render(<NotebookHarness />);
 
-    await user.click(screen.getByRole("button", { name: "Adicionar folha à seção" }));
+    await user.click(screen.getByRole("button", { name: "Adicionar página à seção" }));
+    await user.click(screen.getByRole("button", { name: /Página em branco/ }));
     const newPageId = getNotebookDocument().activeSurfaceId;
     if (!newPageId) {
       throw new Error("Expected active page surface");
     }
     expect(getSectionByPageId(getNotebookDocument(), newPageId)?.id).toBe(firstSectionId);
 
-    await user.click(screen.getByRole("button", { name: "Mover folha para seção" }));
+    await user.click(screen.getByRole("button", { name: "Mover página para seção" }));
     expect(screen.getByRole("menuitemradio", { name: "July" })).toHaveAttribute("aria-checked", "true");
     await user.click(screen.getByRole("menuitemradio", { name: "Destino" }));
 
@@ -376,14 +382,14 @@ describe("Notebook section management", () => {
     useEditorStore.getState().beginNotebookTransition({
       documentId: document.id,
       fromSurfaceId: section.divider.id,
-      toSurfaceId: section.pages[0].id,
+      toSurfaceId: getPagesInSection(document, section.id)[0].id,
       direction: "forward",
       phase: "running",
     });
 
     render(<NotebookHarness />);
 
-    expect(screen.queryByRole("button", { name: "Mover folha para seção" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Mover página para seção" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Adicionar seção" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Ações da seção July" })).toBeDisabled();
   });

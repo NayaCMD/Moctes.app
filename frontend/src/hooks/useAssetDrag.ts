@@ -98,7 +98,6 @@ export function useAssetDrag({ asset, previewSrc, onSelect, onAdded }: UseAssetD
             safeArea: DEFAULT_SAFE_AREA,
         });
 
-        editorState.recordHistory(documentState.documents);
         documentState.setActivePage(page.id);
         useDocumentStore.getState().addElement(page.id, element);
         useAppStore.getState().setSelectedAssetId(asset.id);

@@ -75,7 +75,7 @@ function assetElement(
     hidden: false,
     style: {
       image: {
-        objectFit: options.objectFit ?? "cover",
+        objectFit: options.objectFit ?? (type === "image" || type === "sticker" ? "contain" : "cover"),
         borderRadius: 4,
         boxShadow: type === "tape" ? undefined : "0 8px 14px rgba(71,83,113,0.14)",
       },

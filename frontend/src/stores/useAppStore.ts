@@ -10,6 +10,7 @@ interface AppState {
   activeDocumentType: DocumentType;
   selectedAssetId: string | null;
   sidebarVisible: boolean;
+  activeSidebarTab: "library" | "appearance";
   showPageNavigation: boolean;
   interfaceTheme: InterfaceTheme;
   paperType: PaperType;
@@ -19,6 +20,7 @@ interface AppState {
   setActiveDocumentType: (documentType: DocumentType) => void;
   setSelectedAssetId: (assetId: string | null) => void;
   setSidebarVisible: (visible: boolean) => void;
+  setActiveSidebarTab: (tab: "library" | "appearance") => void;
   togglePageNavigation: () => void;
   setInterfaceTheme: (theme: InterfaceTheme) => void;
   setPaperType: (paperType: PaperType) => void;
@@ -33,6 +35,7 @@ export const useAppStore = create<AppState>()(
       activeDocumentType: "notebook",
       selectedAssetId: null,
       sidebarVisible: true,
+      activeSidebarTab: "library",
       showPageNavigation: true,
       interfaceTheme: "baby-blue",
       paperType: "grid",
@@ -43,6 +46,7 @@ export const useAppStore = create<AppState>()(
         set({ activeDocumentType }),
       setSelectedAssetId: (selectedAssetId) => set({ selectedAssetId }),
       setSidebarVisible: (sidebarVisible) => set({ sidebarVisible }),
+      setActiveSidebarTab: (activeSidebarTab) => set({ activeSidebarTab }),
       togglePageNavigation: () =>
         set((state) => ({ showPageNavigation: !state.showPageNavigation })),
       setInterfaceTheme: (interfaceTheme) => set({ interfaceTheme }),

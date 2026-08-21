@@ -61,8 +61,8 @@ export function NotebookSectionDialog({
   const dialogTitle = mode === "add" ? "Adicionar seção" : "Renomear seção";
   const description =
     mode === "add"
-      ? "Crie uma nova matéria ou tópico para organizar as folhas."
-      : "Atualize o nome da seção mantendo suas folhas e divisória.";
+      ? "Crie uma nova matéria ou tópico para organizar as páginas."
+      : "Atualize o nome da seção mantendo suas páginas e divisória.";
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();

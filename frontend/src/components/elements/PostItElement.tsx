@@ -1,4 +1,5 @@
 import { createElement, useEffect, useRef } from "react";
+import { useKeepFocusedEditorVisible } from "../../hooks/useKeepFocusedEditorVisible";
 import { useDocumentStore } from "../../stores/useDocumentStore";
 import { useEditorStore } from "../../stores/useEditorStore";
 import type { PageElement } from "../../types/element.types";
@@ -10,13 +11,12 @@ interface PostItElementProps {
 }
 
 export function PostItElement({ element, interactive = true }: PostItElementProps) {
-  const documents = useDocumentStore((state) => state.documents);
   const updateElement = useDocumentStore((state) => state.updateElement);
   const editingTextElementId = useEditorStore((state) => state.editingTextElementId);
   const setEditingTextElementId = useEditorStore((state) => state.setEditingTextElementId);
-  const recordHistory = useEditorStore((state) => state.recordHistory);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const isEditing = interactive && editingTextElementId === element.id;
+  useKeepFocusedEditorVisible(isEditing, textareaRef);
 
   useEffect(() => {
     if (isEditing) {
@@ -35,7 +35,6 @@ export function PostItElement({ element, interactive = true }: PostItElementProp
   const finishEditing = () => {
     const nextText = textareaRef.current?.value ?? content.text;
     if (nextText !== content.text) {
-      recordHistory(documents);
       updateElement(element.id, {
         content: {
           ...content,
@@ -57,7 +56,7 @@ export function PostItElement({ element, interactive = true }: PostItElementProp
           preserveAspectRatio: content.appearance.preserveAspectRatio,
         })
       ) : (
-        <span className="post-it-element__fallback">Template indisponivel</span>
+        <span className="post-it-element__fallback">Template indisponível</span>
       )}
 
       {isEditing ? (

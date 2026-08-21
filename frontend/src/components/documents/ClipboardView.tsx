@@ -31,7 +31,7 @@ export function ClipboardView({ document }: ClipboardViewProps) {
         <DocumentPage
           page={page}
           className="clipboard-paper"
-          label={page.title ?? "Folha da prancheta"}
+          label={page.title ?? "Página da prancheta"}
         />
       </div>
     </article>

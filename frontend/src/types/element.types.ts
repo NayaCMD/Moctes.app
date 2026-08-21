@@ -8,6 +8,7 @@ export type PageElementType =
   | "sticker"
   | "image"
   | "tape"
+  | "checklist"
   | "post-it"
   | "comment"
   | "drawing";
@@ -15,6 +16,31 @@ export type PageElementType =
 export interface TextElementContent {
   kind: "text";
   text: string;
+}
+
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
+export type ChecklistMarkerStyle = "circle" | "square";
+export type ChecklistSurfaceStyle = "transparent" | "paper" | "highlight";
+
+export interface ChecklistAppearance {
+  accentColor: string;
+  textColor: string;
+  completedColor: string;
+  backgroundColor: string;
+  markerStyle: ChecklistMarkerStyle;
+  surfaceStyle: ChecklistSurfaceStyle;
+}
+
+export interface ChecklistElementContent {
+  kind: "checklist";
+  title: string;
+  items: ChecklistItem[];
+  appearance: ChecklistAppearance;
 }
 
 export interface ImageElementContent extends AssetReference {
@@ -25,13 +51,35 @@ export interface StickerElementContent extends AssetReference {
   kind: "sticker";
 }
 
+export type TapeRenderMode = "repeat" | "crop";
+
+export type TapeEdgeStyle = "straight" | "torn-soft" | "torn-rough";
+
 export interface TapeElementContent extends AssetReference {
   kind: "tape";
+  /** Repeats the source horizontally or crops it without changing its aspect ratio. */
+  renderMode?: TapeRenderMode;
+  /** Visual finish applied to the tape ends. Optional for legacy documents. */
+  edgeStyle?: TapeEdgeStyle;
+}
+
+export type EmojiProvider = "noto-color-emoji" | "native" | "custom";
+
+export interface EmojiAssetReference {
+  kind: "font" | "image";
+  fontFamily?: string;
+  src?: string;
 }
 
 export interface EmojiElementContent {
   kind: "emoji";
+  /** Unicode fallback kept for documents created before Emoji Picker V2. */
   emoji: string;
+  provider?: EmojiProvider;
+  emojiId?: string;
+  shortcode?: string;
+  label?: string;
+  asset?: EmojiAssetReference;
 }
 
 export interface ShapeElementContent {
@@ -114,6 +162,7 @@ export interface DrawingElementContent {
 
 export type ElementContent =
   | TextElementContent
+  | ChecklistElementContent
   | ImageElementContent
   | StickerElementContent
   | TapeElementContent

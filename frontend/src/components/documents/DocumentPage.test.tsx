@@ -31,7 +31,20 @@ function mockPaperRect() {
 describe("DocumentPage", () => {
   beforeEach(() => resetStores());
 
-  it("cria um texto em clique de area vazia e seleciona o novo elemento", () => {
+  it("nao cria texto em um clique solto com o editor em modo de selecao", () => {
+    const page = activePage();
+    render(<DocumentPage page={page} className="test-page" label="Pagina teste" />);
+    const paper = mockPaperRect();
+    const before = useDocumentStore.getState().documents[0].pages[0].elements.length;
+
+    fireEvent.click(paper, { clientX: 320, clientY: 250 });
+
+    expect(useDocumentStore.getState().documents[0].pages[0].elements).toHaveLength(before);
+    expect(useDocumentStore.getState().selectedElementId).toBeNull();
+  });
+
+  it("cria um unico texto depois que a ferramenta de texto e selecionada", () => {
+    useEditorStore.getState().setEditorMode("text");
     const page = activePage();
     render(<DocumentPage page={page} className="test-page" label="Pagina teste" />);
     const paper = mockPaperRect();
@@ -47,6 +60,28 @@ describe("DocumentPage", () => {
       type: "text",
       content: { kind: "text", text: "Digite aqui" },
     });
+    expect(useEditorStore.getState().editorMode).toBe("select");
+  });
+
+  it("cria e abre uma checklist depois que a ferramenta e selecionada", () => {
+    useEditorStore.getState().setEditorMode("checklist");
+    const page = activePage();
+    render(<DocumentPage page={page} className="test-page" label="Pagina teste" />);
+    const paper = mockPaperRect();
+    const before = useDocumentStore.getState().documents[0].pages[0].elements.length;
+
+    fireEvent.click(paper, { clientX: 280, clientY: 220 });
+
+    const state = useDocumentStore.getState();
+    const checklist = state.documents[0].pages[0].elements.at(-1);
+    expect(state.documents[0].pages[0].elements).toHaveLength(before + 1);
+    expect(checklist).toMatchObject({
+      id: state.selectedElementId,
+      type: "checklist",
+      content: { kind: "checklist", title: "Lista de tarefas" },
+    });
+    expect(useEditorStore.getState().editorMode).toBe("select");
+    expect(useEditorStore.getState().editingTextElementId).toBe(checklist?.id);
   });
 
   it("nao cria outro elemento ao clicar em elemento existente", async () => {
@@ -58,6 +93,36 @@ describe("DocumentPage", () => {
     await userEvent.click(screen.getAllByRole("button", { name: "Selecionar elemento text" })[0]);
 
     expect(useDocumentStore.getState().documents[0].pages[0].elements).toHaveLength(before);
+  });
+
+  it("desseleciona ao clicar na area vazia antes de executar a ferramenta ativa", () => {
+    const page = activePage();
+    const selectedElement = page.elements[0];
+    useAppStore.getState().setActiveTool("text");
+    useEditorStore.getState().setEditorMode("text");
+    useDocumentStore.getState().selectElement(selectedElement.id);
+    render(<DocumentPage page={page} className="test-page" label="Pagina teste" />);
+    const paper = mockPaperRect();
+    const before = page.elements.length;
+
+    fireEvent.click(paper, { clientX: 320, clientY: 250 });
+
+    expect(useDocumentStore.getState().selectedElementId).toBeNull();
+    expect(useDocumentStore.getState().documents[0].pages[0].elements).toHaveLength(before);
+  });
+
+  it("desseleciona ao clicar fora durante a edicao de texto", () => {
+    const page = activePage();
+    const textElement = page.elements.find((element) => element.type === "text");
+    if (!textElement) throw new Error("Text element not found");
+    useDocumentStore.getState().selectElement(textElement.id);
+    useEditorStore.getState().setEditingTextElementId(textElement.id);
+    render(<DocumentPage page={page} className="test-page" label="Pagina teste" />);
+    const paper = mockPaperRect();
+
+    fireEvent.click(paper, { clientX: 320, clientY: 250 });
+
+    expect(useDocumentStore.getState().selectedElementId).toBeNull();
   });
 
   it("nao cria quando ferramenta nao tem acao de criacao", () => {

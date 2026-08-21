@@ -1,10 +1,16 @@
 import type { Divider, DocumentType, MoctesDocument } from "../types/document.types";
 import type { PageElement } from "../types/element.types";
 import type { NotebookBookState, NotebookTransitionState } from "../types/notebook.types";
-import type { Page } from "../types/page.types";
+import type { Page, PaperAppearance, PaperMargins, PaperTexture } from "../types/page.types";
 import type { PaperType } from "../types/theme.types";
-import { migrateDocumentToSchemaV2 } from "./notebookMigration.utils";
-import { getSurfaceById } from "./notebookSurfaces.utils";
+import {
+  getDefaultPatternSize,
+  getPageAppearance,
+  normalizePaperAppearance,
+} from "./paperAppearance.utils";
+import { migrateDocumentToSchemaV3 } from "./notebookMigration.utils";
+import { buildNotebookSpreadView } from "./notebookSpread.utils";
+import { buildNotebookSurfaces, getSurfaceById } from "./notebookSurfaces.utils";
 
 export function createId(prefix: string): string {
   return `${prefix}-${crypto.randomUUID()}`;
@@ -62,53 +68,64 @@ export function getEditableActivePage(
     return undefined;
   }
 
-  const activeSurface = document.activeSurfaceId
-    ? getSurfaceById(document, document.activeSurfaceId)
-    : undefined;
-
-  if (activeSurface?.kind !== "page") {
+  const focusedPage = getActivePage(document);
+  if (!focusedPage) {
     return undefined;
   }
 
-  return document.pages.find((page) => page.id === activeSurface.id);
+  const spread = buildNotebookSpreadView(
+    buildNotebookSurfaces(document),
+    document.activeSurfaceId,
+  );
+  const focusedPageIsVisible = [spread.leftSurface, spread.rightSurface].some(
+    (surface) => surface?.kind === "page" && surface.id === focusedPage.id,
+  );
+
+  return focusedPageIsVisible ? focusedPage : undefined;
 }
 
 export function createEmptyPage(options: {
   documentId: string;
   order: number;
+  sectionId?: string;
   dividerId?: string;
   paperType: PaperType;
   paperColor: string;
   patternColor?: string;
   patternOpacity?: number;
   patternSize?: number;
+  paperTexture?: PaperTexture;
+  textureIntensity?: number;
+  margins?: PaperMargins;
+  appearance?: Partial<PaperAppearance>;
   title?: string;
 }): Page {
   const createdAt = timestamp();
-
-  const defaultPatternSize =
-    options.paperType === "dotted"
-      ? 18
-      : options.paperType === "lined"
-        ? 25
-        : 22;
+  const appearance = normalizePaperAppearance({
+    ...options.appearance,
+    paperType: options.appearance?.paperType ?? options.paperType,
+    paperColor: options.appearance?.paperColor ?? options.paperColor,
+    patternColor: options.appearance?.patternColor ?? options.patternColor,
+    patternOpacity: options.appearance?.patternOpacity ?? options.patternOpacity,
+    patternSize:
+      options.appearance?.patternSize ??
+      options.patternSize ??
+      getDefaultPatternSize(options.paperType),
+    paperTexture: options.appearance?.paperTexture ?? options.paperTexture,
+    textureIntensity: options.appearance?.textureIntensity ?? options.textureIntensity,
+    margins: options.appearance?.margins ?? options.margins,
+  });
 
   return {
     id: createId("page"),
     documentId: options.documentId,
+    sectionId: options.sectionId,
     dividerId: options.dividerId,
     title: options.title,
     order: options.order,
 
-    paperType: options.paperType,
-    paperColor: options.paperColor,
-
-    patternColor:
-      options.patternColor ?? "#72a0b9",
-    patternOpacity:
-      options.patternOpacity ?? 14,
-    patternSize:
-      options.patternSize ?? defaultPatternSize,
+    ...appearance,
+    margins: { ...appearance.margins },
 
     elements: [],
     createdAt,
@@ -125,6 +142,7 @@ export function createEmptyDocument(type: DocumentType): MoctesDocument {
     paperColor: type === "clipboard" ? "#f7fcff" : "#fffdf8",
     title: "Nova página",
   });
+  const defaultPaperAppearance = getPageAppearance(page);
 
   const document: MoctesDocument = {
     id: documentId,
@@ -143,13 +161,15 @@ export function createEmptyDocument(type: DocumentType): MoctesDocument {
     clipboardColor: type === "clipboard" ? "#c8b4e6" : undefined,
     favorite: false,
     pages: [page],
+    defaultPaperAppearance,
+    paperTemplates: [],
     dividers: [],
     activePageId: page.id,
     createdAt,
     updatedAt: createdAt,
   };
 
-  return type === "notebook" ? migrateDocumentToSchemaV2(document) : document;
+  return type === "notebook" ? migrateDocumentToSchemaV3(document) : document;
 }
 
 export function clonePage(page: Page, overrides: Partial<Page> = {}): Page {

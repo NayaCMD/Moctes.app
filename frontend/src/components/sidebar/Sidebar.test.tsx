@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useAssetLibraryStore } from "../../stores/useAssetLibraryStore";
 import { useDocumentStore } from "../../stores/useDocumentStore";
@@ -20,10 +20,11 @@ describe("Sidebar", () => {
     render(<Sidebar />);
 
     expect(screen.getByRole("heading", { name: "Stickers" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Images" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Imagens" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Post-its" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Tapes" })).toBeInTheDocument();
     expect(screen.getByText("11 de 15 itens")).toBeInTheDocument();
+    expect(screen.queryByText(/Asset indisponível/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Pasta ativa")).not.toBeInTheDocument();
     expect(screen.queryAllByText("Adicionar")).toHaveLength(0);
   });
@@ -32,14 +33,14 @@ describe("Sidebar", () => {
     render(<Sidebar />);
 
     expect(screen.getByRole("tab", { name: "Biblioteca" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.queryByText("Cor da capa")).not.toBeInTheDocument();
+    expect(screen.queryByText("Capa")).not.toBeInTheDocument();
     expect(document.querySelector(".appearance-panel")).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("tab", { name: "Aparência" }));
 
     expect(screen.getByRole("tabpanel", { name: "Aparência" })).toBeInTheDocument();
-    expect(screen.getByText("Cor da capa")).toBeInTheDocument();
-    expect(screen.getByText("Cor da lombada")).toBeInTheDocument();
+    expect(screen.getByText("Capa")).toBeInTheDocument();
+    expect(screen.getByText("Lombada")).toBeInTheDocument();
   });
 
   it("abre biblioteca avancada com pastas, busca, filtros e importacao", async () => {
@@ -51,6 +52,32 @@ describe("Sidebar", () => {
     expect(screen.getByLabelText("Pasta ativa")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Tapes" }));
     expect(useAssetLibraryStore.getState().activeTypeFilter).toBe("tape");
+  });
+
+  it("renderiza o gerenciador fora da sidebar e devolve o foco ao fechar", async () => {
+    render(<Sidebar />);
+    const manageButton = screen.getByRole("button", {
+      name: "Gerenciar biblioteca",
+    });
+
+    await userEvent.click(manageButton);
+
+    const dialog = screen.getByRole("dialog", { name: "Gerenciar biblioteca" });
+    expect(dialog.parentElement?.parentElement).toBe(document.body);
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", {
+          name: "Fechar gerenciador de biblioteca",
+        }),
+      ).toHaveFocus(),
+    );
+
+    await userEvent.keyboard("{Escape}");
+
+    expect(
+      screen.queryByRole("dialog", { name: "Gerenciar biblioteca" }),
+    ).not.toBeInTheDocument();
+    await waitFor(() => expect(manageButton).toHaveFocus());
   });
 
   it("seleciona asset e adiciona por duplo clique", async () => {
@@ -67,7 +94,7 @@ describe("Sidebar", () => {
     expect(elements).toHaveLength(before + 1);
     expect(elements.at(-1)).toMatchObject({ type: "sticker" });
     expect(useDocumentStore.getState().selectedElementId).toBe(elements.at(-1)?.id);
-    expect(screen.getByText("Asset adicionado a pagina.")).toBeInTheDocument();
+    expect(screen.getByText("Asset adicionado à página.")).toBeInTheDocument();
   });
 
   it("nao adiciona asset quando a divisoria do caderno esta aberta", async () => {

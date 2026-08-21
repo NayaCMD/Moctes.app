@@ -1,5 +1,4 @@
 import { useCallback, useState } from "react";
-import { useAppStore } from "../../stores/useAppStore";
 import { useDocumentStore } from "../../stores/useDocumentStore";
 import {
   elementPassesVisibilityFilter,
@@ -11,11 +10,14 @@ import { createCommentElement, createElementFromTool } from "../../utils/element
 import { elementCenterIntersectsArea, normalizeEraseArea } from "../../utils/eraseArea.utils";
 import { placeElementForInsertion } from "../../utils/insertion.utils";
 import { SelectionBox } from "../editor/SelectionBox";
+import { ElementQuickActions } from "../editor/ElementQuickActions";
 import { DrawingPreviewOverlay } from "../editor/DrawingPreviewOverlay";
 import { EraseAreaOverlay } from "../editor/EraseAreaOverlay";
 import { PageDropIndicator } from "../editor/PageDropIndicator";
 import { PageElementRenderer } from "../elements/PageElementRenderer";
 import { PaperSurface } from "./PaperSurface";
+import { recordComponentRender } from "../../performance/performanceInstrumentation";
+import { useAuthStore } from "../../stores/useAuthStore";
 
 interface DocumentPageProps {
   page: Page;
@@ -30,27 +32,32 @@ export function DocumentPage({
   label,
   interactive = true,
 }: DocumentPageProps) {
+  recordComponentRender("DocumentPage");
   const [pageElement, setPageElement] = useState<HTMLElement | null>(null);
+  const activeWorkspaceId = useAuthStore((state) => state.activeWorkspaceId);
+  const currentUserName = useAuthStore((state) => state.user?.name);
+  const workspaceRole = useAuthStore(
+    (state) =>
+      state.workspaces.find((workspace) => workspace.id === activeWorkspaceId)
+        ?.role,
+  );
+  const canEdit = interactive && workspaceRole !== "VIEWER";
   const [pendingComment, setPendingComment] = useState<{ x: number; y: number } | null>(null);
   const [commentText, setCommentText] = useState("");
   const [eraseArea, setEraseArea] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const handleSurfaceRef = useCallback((node: HTMLElement | null) => {
     setPageElement(node);
   }, []);
-  const activeTool = useAppStore((state) => state.activeTool);
-  const documents = useDocumentStore((state) => state.documents);
   const addElement = useDocumentStore((state) => state.addElement);
   const updatePage = useDocumentStore((state) => state.updatePage);
   const setActivePage = useDocumentStore((state) => state.setActivePage);
   const activePageId = useDocumentStore((state) => state.activePageId);
   const selectedElementId = useDocumentStore((state) => state.selectedElementId);
   const clearSelection = useDocumentStore((state) => state.clearSelection);
-  const recordHistory = useEditorStore((state) => state.recordHistory);
-  const interaction = useEditorStore((state) => state.interaction);
   const editorMode = useEditorStore((state) => state.editorMode);
+  const setEditorMode = useEditorStore((state) => state.setEditorMode);
   const drawingSettings = useEditorStore((state) => state.drawingSettings);
   const ruler = useEditorStore((state) => state.ruler);
-  const assetDrag = useEditorStore((state) => state.assetDrag);
   const visibilityFilters = useEditorStore((state) => state.visibilityFilters);
   const editingTextElementId = useEditorStore((state) => state.editingTextElementId);
   const closeContextMenu = useEditorStore((state) => state.closeContextMenu);
@@ -74,7 +81,7 @@ export function DocumentPage({
       label={label}
       active={activePageId === page.id}
       onPagePointerDown={(position, event) => {
-        if (interactive && editorMode === "erase-area" && event.button === 0) {
+        if (canEdit && editorMode === "erase-area" && event.button === 0) {
           event.preventDefault();
           closeContextMenu();
           setActivePage(page.id);
@@ -119,7 +126,6 @@ export function DocumentPage({
                 ),
             );
             if (nextElements.length !== page.elements.length) {
-              recordHistory(useDocumentStore.getState().documents);
               updatePage(page.id, { elements: nextElements });
             }
           };
@@ -133,7 +139,7 @@ export function DocumentPage({
           return;
         }
 
-        if (!interactive || editorMode !== "draw" || event.button !== 0) {
+        if (!canEdit || editorMode !== "draw" || event.button !== 0) {
           return;
         }
         event.preventDefault();
@@ -198,7 +204,6 @@ export function DocumentPage({
             },
             style: {},
           };
-          recordHistory(useDocumentStore.getState().documents);
           addElement(page.id, element);
         };
 
@@ -214,29 +219,43 @@ export function DocumentPage({
         window.addEventListener("pointercancel", handleCancel);
       }}
       onPageClick={(position, event) => {
-        if (!interactive) {
+        if (!canEdit) {
           return;
         }
 
         closeContextMenu();
         setActivePage(page.id);
-        if (interaction.mode !== "idle" || assetDrag.status === "dragging" || editingTextElementId) {
+        const editorState = useEditorStore.getState();
+        if (
+          editorState.interaction.mode !== "idle" ||
+          editorState.assetDrag.status === "dragging" ||
+          editingTextElementId
+        ) {
+          if (editingTextElementId) {
+            clearSelection();
+          }
           return;
         }
 
-        if (editorMode === "comment" || activeTool === "comments") {
+        if (selectedElementId) {
+          clearSelection();
+          return;
+        }
+
+        if (editorMode === "comment") {
           setPendingComment(position);
           setCommentText("");
           clearSelection();
           return;
         }
 
-        if (editorMode !== "text" && activeTool !== "text") {
+        if (editorMode !== "text" && editorMode !== "checklist") {
           clearSelection();
           return;
         }
 
-        const element = createElementFromTool("text", position);
+        const insertionTool = editorMode === "checklist" ? "checklist" : "text";
+        const element = createElementFromTool(insertionTool, position);
         if (element) {
           if (event.detail > 1) {
             return;
@@ -247,8 +266,11 @@ export function DocumentPage({
             preferredPosition: position,
             safeArea: DEFAULT_SAFE_AREA,
           });
-          recordHistory(documents);
           addElement(page.id, placedElement);
+          setEditorMode("select");
+          if (insertionTool === "checklist") {
+            useEditorStore.getState().setEditingTextElementId(placedElement.id);
+          }
           return;
         }
 
@@ -259,18 +281,25 @@ export function DocumentPage({
         <PageElementRenderer
           key={element.id}
           element={element}
-          interactive={interactive}
+          interactive={canEdit}
           pageElement={pageElement}
           pageId={page.id}
         />
       ))}
-      {interactive && selectedElement && pageElement && (
-        <SelectionBox element={selectedElement} pageElement={pageElement} />
+      {canEdit && selectedElement && pageElement && (
+        <>
+          <SelectionBox element={selectedElement} pageElement={pageElement} />
+          <ElementQuickActions
+            element={selectedElement}
+            elements={page.elements}
+            pageElement={pageElement}
+          />
+        </>
       )}
-      {interactive && <PageDropIndicator pageId={page.id} pageElement={pageElement} />}
-      {interactive && <DrawingPreviewOverlay pageId={page.id} />}
-      {interactive && <EraseAreaOverlay area={eraseArea} />}
-      {interactive && pendingComment && (
+      {canEdit && <PageDropIndicator pageId={page.id} pageElement={pageElement} />}
+      {canEdit && <DrawingPreviewOverlay pageId={page.id} />}
+      {canEdit && <EraseAreaOverlay area={eraseArea} />}
+      {canEdit && pendingComment && (
         <form
           className="comment-composer"
           style={{ left: `${pendingComment.x}%`, top: `${pendingComment.y}%` }}
@@ -286,12 +315,12 @@ export function DocumentPage({
                 x: pendingComment.x,
                 y: pendingComment.y,
                 text,
+                authorLabel: currentUserName,
               }),
               existingElements: page.elements,
               preferredPosition: pendingComment,
               safeArea: DEFAULT_SAFE_AREA,
             });
-            recordHistory(documents);
             addElement(page.id, element);
             setPendingComment(null);
             setCommentText("");

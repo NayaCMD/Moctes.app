@@ -1,13 +1,14 @@
-import { Image, Link, MessageCircle, Video } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { EDITOR_Z_INDEX } from "../../config/editorZIndex";
 import { useDocumentStore } from "../../stores/useDocumentStore";
-import { useEditorStore } from "../../stores/useEditorStore";
+import { useAuthStore } from "../../stores/useAuthStore";
 import type { CommentElementContent, PageElement } from "../../types/element.types";
 
 interface CommentElementProps {
   element: PageElement;
+  interactive?: boolean;
 }
 
 interface ThreadPosition {
@@ -35,7 +36,7 @@ function getThreadPosition(marker: HTMLElement): ThreadPosition {
   };
 }
 
-export function CommentElement({ element }: CommentElementProps) {
+export function CommentElement({ element, interactive = true }: CommentElementProps) {
   const markerRef = useRef<HTMLButtonElement | null>(null);
   const [open, setOpen] = useState(false);
   const [markerElement, setMarkerElement] = useState<HTMLElement | null>(null);
@@ -75,6 +76,7 @@ export function CommentElement({ element }: CommentElementProps) {
         <CommentThreadPopover
           elementId={element.id}
           content={content}
+          interactive={interactive}
           markerElement={markerElement}
           onClose={() => {
             setOpen(false);
@@ -90,20 +92,21 @@ function CommentThreadPopover({
   elementId,
   content,
   markerElement,
+  interactive,
   onClose,
 }: {
   elementId: string;
   content: CommentElementContent;
   markerElement: HTMLElement;
+  interactive: boolean;
   onClose: () => void;
 }) {
   const [draft, setDraft] = useState("");
   const [position, setPosition] = useState(() => getThreadPosition(markerElement));
   const popoverRef = useRef<HTMLFormElement | null>(null);
-  const documents = useDocumentStore((state) => state.documents);
   const updateElement = useDocumentStore((state) => state.updateElement);
   const deleteElement = useDocumentStore((state) => state.deleteElement);
-  const recordHistory = useEditorStore((state) => state.recordHistory);
+  const currentUserName = useAuthStore((state) => state.user?.name ?? "Pessoa usuária");
 
   useEffect(() => {
     const update = () => setPosition(getThreadPosition(markerElement));
@@ -143,7 +146,6 @@ function CommentThreadPopover({
   }, []);
 
   const updateContent = (updates: Partial<typeof content>) => {
-    recordHistory(documents);
     updateElement(elementId, {
       content: {
         ...content,
@@ -167,6 +169,7 @@ function CommentThreadPopover({
       onClick={(event) => event.stopPropagation()}
       onSubmit={(event) => {
         event.preventDefault();
+        if (!interactive) return;
         const text = draft.trim();
         if (!text) {
           return;
@@ -177,7 +180,7 @@ function CommentThreadPopover({
             ...content.messages,
             {
               id: `msg-${crypto.randomUUID()}`,
-              authorLabel: "Usuária",
+              authorLabel: currentUserName,
               text,
               createdAt,
               attachments: [],
@@ -202,40 +205,31 @@ function CommentThreadPopover({
           </p>
         ))}
       </div>
-      <label>
-        <span className="sr-only">Nova mensagem</span>
-        <input value={draft} placeholder="Responder..." onChange={(event) => setDraft(event.target.value)} />
-      </label>
-      <div className="comment-attachment-actions" aria-label="Anexos">
-        <button type="button" disabled>
-          <Image size={14} />
-          Imagem
-        </button>
-        <button type="button" disabled>
-          <Link size={14} />
-          Link
-        </button>
-        <button type="button" disabled>
-          <Video size={14} />
-          Vídeo
-        </button>
-      </div>
-      <div className="comment-thread-actions">
-        <button type="submit">Enviar</button>
-        <button type="button" onClick={() => updateContent({ resolved: !content.resolved })}>
-          {content.resolved ? "Reabrir" : "Resolver"}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            recordHistory(documents);
-            deleteElement(elementId);
-            onClose();
-          }}
-        >
-          Excluir
-        </button>
-      </div>
+      {interactive ? (
+        <>
+          <label>
+            <span className="sr-only">Nova mensagem</span>
+            <input value={draft} placeholder="Responder..." onChange={(event) => setDraft(event.target.value)} />
+          </label>
+          <div className="comment-thread-actions">
+            <button type="submit">Enviar</button>
+            <button type="button" onClick={() => updateContent({ resolved: !content.resolved })}>
+              {content.resolved ? "Reabrir" : "Resolver"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                deleteElement(elementId);
+                onClose();
+              }}
+            >
+              Excluir
+            </button>
+          </div>
+        </>
+      ) : (
+        <p className="comment-readonly-note">Comentário disponível apenas para leitura.</p>
+      )}
     </form>,
     document.body,
   );

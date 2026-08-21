@@ -8,6 +8,7 @@ interface ToolButtonProps {
   label: string;
   icon: LucideIcon;
   tone: string;
+  variant?: "tool" | "command" | "danger";
   active: boolean;
   disabled?: boolean;
   onSelect: (tool: EditorTool, anchor: ToolPopoverAnchor, button: HTMLButtonElement) => void;
@@ -28,6 +29,7 @@ export function ToolButton({
   label,
   icon: Icon,
   tone,
+  variant = "tool",
   active,
   disabled = false,
   onSelect,
@@ -43,8 +45,10 @@ export function ToolButton({
     <button
       type="button"
       className="tool-button"
+      data-label={label}
       data-active={active}
       data-tone={tone}
+      data-variant={variant}
       title={label}
       aria-label={label}
       aria-pressed={active}

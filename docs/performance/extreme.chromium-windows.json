@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "runId": "036382ed-2a4a-4fed-a1a8-0fa015710d11",
+  "generatedAt": "2026-08-13T13:55:54.622Z",
+  "profile": "extreme",
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+    "viewport": { "width": 1280, "height": 720, "devicePixelRatio": 1 },
+    "strictMode": false
+  },
+  "scenario": {
+    "pages": 500,
+    "elements": 12178,
+    "activePageElements": 1200,
+    "imageElements": 4163,
+    "distinctImageAssets": 500,
+    "offlineQueueOperations": 1500,
+    "conflictCycles": 1000
+  },
+  "timings": { "scenarioGenerationMs": 7, "documentOpenMs": 169.3 },
+  "fps": {
+    "drag": {
+      "durationMs": 1583.8,
+      "frameCount": 26,
+      "averageFps": 16.42,
+      "medianFrameMs": 54.2,
+      "p95FrameMs": 83.3,
+      "longestFrameMs": 95.8,
+      "droppedFrameRatio": 1
+    },
+    "resize": {
+      "durationMs": 1594,
+      "frameCount": 25,
+      "averageFps": 15.68,
+      "medianFrameMs": 58.5,
+      "p95FrameMs": 91.8,
+      "longestFrameMs": 100,
+      "droppedFrameRatio": 0.96
+    }
+  },
+  "heap": {
+    "before": { "supported": true, "usedBytes": 30355277, "totalBytes": 34576977, "limitBytes": 4395630592 },
+    "afterOpen": { "supported": true, "usedBytes": 59541358, "totalBytes": 83927050, "limitBytes": 4395630592 },
+    "afterRun": { "supported": true, "usedBytes": 93631136, "totalBytes": 196180972, "limitBytes": 4395630592 },
+    "usedHeapDeltaBytes": 63275859
+  },
+  "zustand": { "documentStoreBytes": 4887104, "editorStoreBytes": 3630, "appStoreBytes": 228, "totalBytes": 4890962 },
+  "renders": {
+    "opening": { "DocumentPage": 1, "PageElementRenderer": 1200, "ElementFrame": 1200 },
+    "drag": { "DocumentPage": 28, "PageElementRenderer": 33600, "ElementFrame": 33600, "SelectionBox": 28 },
+    "resize": { "DocumentPage": 26, "PageElementRenderer": 31200, "ElementFrame": 31200, "SelectionBox": 26 }
+  },
+  "sync": {
+    "operationCount": 1500,
+    "enqueueMs": 428.7,
+    "queueReadMs": 21.6,
+    "drainMs": 445.7,
+    "operationsPerSecond": 3365.49,
+    "transport": "deterministic-simulated",
+    "simulatedTransportLatencyMs": 0
+  },
+  "conflicts": {
+    "cycles": 1000,
+    "transitions": 2002,
+    "durationMs": 0.8,
+    "transitionsPerSecond": 2502500,
+    "finalPhase": "synced",
+    "unresolvedConflicts": 0
+  }
+}

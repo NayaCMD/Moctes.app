@@ -1,19 +1,302 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+enum MembershipStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+}
+
+enum AssetStatus {
+  PENDING
+  PROCESSING
+  READY
+  QUARANTINED
+  REJECTED
+}
+
+enum AssetVariantKind {
+  DISPLAY_WEBP
+  DISPLAY_AVIF
+  THUMBNAIL_WEBP
+  THUMBNAIL_AVIF
+}
+
+enum AssetProcessingJobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum WorkspaceInvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
 }
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  notes Note[]
+  notes             Note[]
+  sessions          Session[]
+  memberships       Membership[]
+  createdWorkspaces Workspace[]        @relation("WorkspaceCreator")
+  documentRevisions DocumentRevision[]
+  uploadedAssets    Asset[]            @relation("AssetUploader")
+  sentInvitations   WorkspaceInvitation[] @relation("InvitationSender")
+  acceptedInvitations WorkspaceInvitation[] @relation("InvitationAcceptor")
+  createdShareLinks DocumentShareLink[] @relation("ShareLinkCreator")
+  collaborationOperations DocumentOperation[]
+}
+
+model Workspace {
+  id                String   @id @default(uuid())
+  name              String
+  slug              String   @unique
+  createdById       String
+  storageUsedBytes  Int      @default(0)
+  storageLimitBytes Int      @default(104857600)
+  assetLimit        Int      @default(500)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  createdBy   User         @relation("WorkspaceCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  memberships Membership[]
+  documents   Document[]
+  assets      Asset[]
+  invitations WorkspaceInvitation[]
+
+  @@index([createdById])
+}
+
+model Membership {
+  id          String           @id @default(uuid())
+  userId      String
+  workspaceId String
+  role        WorkspaceRole
+  status      MembershipStatus @default(ACTIVE)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([workspaceId, status])
+}
+
+model Session {
+  id         String   @id @default(uuid())
+  tokenHash  String   @unique
+  userId     String
+  expiresAt  DateTime
+  lastSeenAt DateTime @default(now())
+  userAgent  String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Document {
+  id            String   @id
+  workspaceId   String
+  title         String
+  type          String
+  schemaVersion Int      @default(3)
+  content       Json
+  version       Int      @default(1)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  workspace Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  revisions DocumentRevision[]
+  shareLinks DocumentShareLink[]
+  operations DocumentOperation[]
+  collaborationSequence Int @default(0)
+
+  @@index([workspaceId, updatedAt])
+  @@index([workspaceId, deletedAt, updatedAt])
+}
+
+model WorkspaceInvitation {
+  id           String                    @id @default(uuid())
+  workspaceId  String
+  email        String
+  role         WorkspaceRole
+  status       WorkspaceInvitationStatus @default(PENDING)
+  tokenHash    String                    @unique
+  invitedById  String
+  acceptedById String?
+  expiresAt    DateTime
+  acceptedAt   DateTime?
+  revokedAt    DateTime?
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+
+  workspace  Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy  User      @relation("InvitationSender", fields: [invitedById], references: [id], onDelete: Cascade)
+  acceptedBy User?     @relation("InvitationAcceptor", fields: [acceptedById], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, status, createdAt])
+  @@index([email, status])
+}
+
+model DocumentShareLink {
+  id          String   @id @default(uuid())
+  documentId  String
+  tokenHash   String   @unique
+  createdById String
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  lastUsedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  document  Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdBy User     @relation("ShareLinkCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([documentId, revokedAt, createdAt])
+}
+
+model DocumentOperation {
+  id          String   @id @default(uuid())
+  documentId  String
+  sequence    Int
+  operationId String
+  clientId    String
+  baseSequence Int
+  documentVersion Int?
+  patches     Json
+  actorId     String
+  createdAt   DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  actor    User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, sequence])
+  @@unique([documentId, operationId])
+  @@index([documentId, createdAt])
+  @@index([actorId])
+}
+
+model DocumentRevision {
+  id                  String   @id @default(uuid())
+  documentId          String
+  version             Int
+  title               String
+  schemaVersion       Int
+  content             Json
+  createdById         String?
+  restoredFromVersion Int?
+  createdAt           DateTime @default(now())
+
+  document  Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdBy User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([documentId, version])
+  @@index([documentId, createdAt])
+  @@index([createdById])
+}
+
+model Asset {
+  id                     String      @id @default(uuid())
+  workspaceId            String
+  uploadedById           String?
+  folderId               String?
+  type                   String
+  name                   String
+  originalFilename       String
+  objectKey              String      @unique
+  sourceObjectKey        String?     @unique
+  mimeType               String
+  sourceMimeType         String
+  detectedMimeType       String?
+  size                   Int
+  sourceSize             Int
+  storageBytes           Int
+  width                  Int?
+  height                 Int?
+  status                 AssetStatus @default(PENDING)
+  processingErrorCode    String?
+  processingErrorMessage String?
+  uploadExpiresAt        DateTime
+  uploadedAt             DateTime?
+  processedAt            DateTime?
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+
+  workspace     Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  uploadedBy    User?               @relation("AssetUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  variants      AssetVariant[]
+  processingJob AssetProcessingJob?
+
+  @@index([workspaceId, status, createdAt])
+  @@index([status, uploadExpiresAt])
+  @@index([uploadedById])
+}
+
+model AssetVariant {
+  id        String           @id @default(uuid())
+  assetId   String
+  kind      AssetVariantKind
+  objectKey String           @unique
+  mimeType  String
+  size      Int
+  width     Int
+  height    Int
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, kind])
+  @@index([assetId])
+}
+
+model AssetProcessingJob {
+  id          String                   @id @default(uuid())
+  assetId     String                   @unique
+  status      AssetProcessingJobStatus @default(QUEUED)
+  attempts    Int                      @default(0)
+  maxAttempts Int                      @default(5)
+  availableAt DateTime                 @default(now())
+  lockedAt    DateTime?
+  lockedBy    String?
+  lastError   String?
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([status, availableAt])
+  @@index([status, lockedAt])
 }
 
 model Note {

@@ -5,7 +5,11 @@ import type { MoctesDocument } from "../types/document.types";
 import type { ActiveToolPanel, DrawingToolSettings, EditorMode, RulerState, ZoomMode } from "../types/editor.types";
 import type { DrawingPoint, PageElement, PageElementType } from "../types/element.types";
 import type { NotebookBookState, NotebookTransitionState } from "../types/notebook.types";
-import { cloneDocuments, pushHistorySnapshot } from "../utils/history.utils";
+import {
+  applyHistoryPatches,
+  pushHistoryEntry,
+  type HistoryEntry,
+} from "../utils/history.utils";
 
 export type EditorInteractionMode = "idle" | "dragging" | "resizing" | "rotating";
 
@@ -24,6 +28,7 @@ export interface ContextMenuState {
 
 export interface VisibilityFilters {
   text: boolean;
+  checklist: boolean;
   image: boolean;
   sticker: boolean;
   tape: boolean;
@@ -38,6 +43,7 @@ export interface AssetDragState {
   assetType: PageElementType | null;
   sourceCategory: AssetCategory | null;
   previewSrc: string | null;
+  previewText?: string | null;
   previewAlt: string | null;
   pointerX: number;
   pointerY: number;
@@ -75,8 +81,8 @@ interface EditorStoreState {
   ruler: RulerState;
   clipboardElement: PageElement | null;
   pasteCount: number;
-  undoStack: MoctesDocument[][];
-  redoStack: MoctesDocument[][];
+  undoStack: HistoryEntry[];
+  redoStack: HistoryEntry[];
   contextMenu: ContextMenuState;
   visibilityPanelOpen: boolean;
   visibilityFilters: VisibilityFilters;
@@ -98,7 +104,7 @@ interface EditorStoreState {
   cancelAssetDrag: () => void;
   setClipboardElement: (element: PageElement | null) => void;
   incrementPasteCount: () => void;
-  recordHistory: (documents: MoctesDocument[]) => void;
+  recordHistoryEntry: (entry: HistoryEntry) => void;
   undo: (current: MoctesDocument[]) => MoctesDocument[] | null;
   redo: (current: MoctesDocument[]) => MoctesDocument[] | null;
   canUndo: () => boolean;
@@ -129,6 +135,7 @@ interface EditorStoreState {
 
 const defaultVisibilityFilters: VisibilityFilters = {
   text: true,
+  checklist: true,
   image: true,
   sticker: true,
   tape: true,
@@ -143,6 +150,7 @@ const idleAssetDrag: AssetDragState = {
   assetType: null,
   sourceCategory: null,
   previewSrc: null,
+  previewText: null,
   previewAlt: null,
   pointerX: 0,
   pointerY: 0,
@@ -237,36 +245,36 @@ export const useEditorStore = create<EditorStoreState>()((set, get) => ({
   setClipboardElement: (clipboardElement) =>
     set({ clipboardElement: clipboardElement ? structuredClone(clipboardElement) : null }),
   incrementPasteCount: () => set((state) => ({ pasteCount: state.pasteCount + 1 })),
-  recordHistory: (documents) =>
+  recordHistoryEntry: (entry) =>
     set((state) => ({
-      undoStack: pushHistorySnapshot(state.undoStack, documents),
+      undoStack: pushHistoryEntry(state.undoStack, entry),
       redoStack: [],
     })),
   undo: (current) => {
     const state = get();
-    const previous = state.undoStack.at(-1);
-    if (!previous) {
+    const entry = state.undoStack.at(-1);
+    if (!entry) {
       return null;
     }
 
     set({
       undoStack: state.undoStack.slice(0, -1),
-      redoStack: pushHistorySnapshot(state.redoStack, current),
+      redoStack: pushHistoryEntry(state.redoStack, entry),
     });
-    return cloneDocuments(previous);
+    return applyHistoryPatches(current, entry.inversePatches);
   },
   redo: (current) => {
     const state = get();
-    const next = state.redoStack.at(-1);
-    if (!next) {
+    const entry = state.redoStack.at(-1);
+    if (!entry) {
       return null;
     }
 
     set({
       redoStack: state.redoStack.slice(0, -1),
-      undoStack: pushHistorySnapshot(state.undoStack, current),
+      undoStack: pushHistoryEntry(state.undoStack, entry),
     });
-    return cloneDocuments(next);
+    return applyHistoryPatches(current, entry.patches);
   },
   canUndo: () => get().undoStack.length > 0,
   canRedo: () => get().redoStack.length > 0,
@@ -445,6 +453,7 @@ export function elementPassesVisibilityFilter(
 
   const keyByType: Partial<Record<PageElementType, keyof VisibilityFilters>> = {
     text: "text",
+    checklist: "checklist",
     image: "image",
     sticker: "sticker",
     tape: "tape",

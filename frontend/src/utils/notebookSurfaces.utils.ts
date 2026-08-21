@@ -14,7 +14,7 @@ export function buildNotebookSurfaces(document: MoctesDocument): NotebookSurface
         sectionId: section.id,
         divider: section.divider,
       },
-      ...[...section.pages]
+      ...getPagesInSection(document, section.id)
         .sort((first, second) => first.order - second.order)
         .map((page) => ({
           kind: "page" as const,
@@ -37,9 +37,15 @@ export function getSectionByPageId(
   document: MoctesDocument,
   pageId: string,
 ): NotebookSection | undefined {
-  return document.sections?.find((section) =>
-    section.pages.some((page) => page.id === pageId),
-  );
+  const sectionId = document.pages.find((page) => page.id === pageId)?.sectionId;
+  return document.sections?.find((section) => section.id === sectionId);
+}
+
+export function getPagesInSection(
+  document: MoctesDocument,
+  sectionId: string,
+) {
+  return document.pages.filter((page) => page.sectionId === sectionId);
 }
 
 export function getActiveSectionId(

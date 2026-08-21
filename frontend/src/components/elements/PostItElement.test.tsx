@@ -82,7 +82,7 @@ describe("PostItElement", () => {
     });
     render(<PostItElement element={element} />);
 
-    expect(screen.getByText("Template indisponivel")).toBeInTheDocument();
+    expect(screen.getByText("Template indisponível")).toBeInTheDocument();
     expect(screen.getByText("fallback")).toBeInTheDocument();
   });
 });

@@ -1,18 +1,23 @@
 import type { CSSProperties, ReactNode } from "react";
 import { EDITOR_LAYOUT } from "../../config/documentGeometry";
+import { useVisualViewportMetrics } from "../../hooks/useResponsiveEditor";
+import { useWorkspaceCapabilities } from "../../hooks/useWorkspaceCapabilities";
 import { AssetDragPreview } from "../editor/AssetDragPreview";
 import { ElementContextMenu } from "../editor/ElementContextMenu";
 import { TextToolbar } from "../editor/TextToolbar";
 import { Sidebar } from "../sidebar/Sidebar";
 import { BottomToolbar } from "../toolbar/BottomToolbar";
 import { DesktopWindow } from "./DesktopWindow";
-import { TopDock } from "./TopDock";
+import { AppHeader } from "./AppHeader";
 
 interface AppLayoutProps {
   children: ReactNode;
+  editor?: boolean;
 }
 
-export function AppLayout({ children }: AppLayoutProps) {
+export function AppLayout({ children, editor = true }: AppLayoutProps) {
+  useVisualViewportMetrics();
+  const { canEdit } = useWorkspaceCapabilities();
   const layoutStyle = {
     "--editor-document-margin-x": `${EDITOR_LAYOUT.documentMarginX}px`,
     "--editor-document-margin-top": `${EDITOR_LAYOUT.documentMarginTop}px`,
@@ -24,21 +29,30 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <DesktopWindow>
-      <TopDock />
+      <AppHeader />
 
-      <div className="moctes-shell">
-        <Sidebar />
+      <div className="moctes-shell" data-editor={editor}>
+        {editor && <Sidebar />}
 
-        <div className="moctes-stage" style={layoutStyle}>
+        <div className="moctes-stage" data-editor={editor} style={layoutStyle}>
           {children}
-          <div className="editor-chrome-layer" aria-label="Controles do editor">
-            <TextToolbar />
-            <ElementContextMenu />
-            <AssetDragPreview />
-          </div>
-          <div className="bottom-dock-layer">
-            <BottomToolbar />
-          </div>
+          {editor && canEdit && (
+            <>
+              <div className="editor-chrome-layer" aria-label="Controles do editor">
+                <TextToolbar />
+                <ElementContextMenu />
+                <AssetDragPreview />
+              </div>
+              <div className="bottom-dock-layer">
+                <BottomToolbar />
+              </div>
+            </>
+          )}
+          {editor && !canEdit && (
+            <div className="bottom-dock-layer">
+              <BottomToolbar />
+            </div>
+          )}
         </div>
       </div>
     </DesktopWindow>

@@ -15,6 +15,7 @@ export const DEFAULT_ELEMENT_SIZES: Record<
   sticker: { width: 16, height: 16 },
   image: { width: 24, height: 24 },
   tape: { width: 26, height: 7 },
+  checklist: { width: 34, height: 24 },
   "post-it": { width: 20, height: 20 },
   comment: { width: 12, height: 8 },
 };

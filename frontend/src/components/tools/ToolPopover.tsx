@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useId, useMemo, useRef } from "react";
 import { X } from "lucide-react";
+import { useIsCompactTouchEditor } from "../../hooks/useResponsiveEditor";
 import type { ActiveToolPanel } from "../../types/editor.types";
 
 export interface ToolPopoverAnchor {
@@ -11,7 +12,7 @@ export interface ToolPopoverAnchor {
 }
 
 const TOOL_PANEL_SIZES = {
-  emoji: { width: 360, maxHeight: 420 },
+  emoji: { width: 400, maxHeight: 560 },
   shapes: { width: 420, maxHeight: 440 },
   stickers: { width: 420, maxHeight: 440 },
   images: { width: 420, maxHeight: 440 },
@@ -49,6 +50,7 @@ export function ToolPopover({
   onClose,
   returnFocusTo,
 }: ToolPopoverProps) {
+  const isCompactTouchEditor = useIsCompactTouchEditor();
   const titleId = useId();
   const contentId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -62,17 +64,23 @@ export function ToolPopover({
   const left = clamp(anchorCenter - width / 2, viewportPadding, viewportWidth - width - viewportPadding);
   const bottom = anchor ? Math.max(viewportHeight - anchor.y + 12, 96) : 106;
   const arrowLeft = clamp(anchorCenter - left, 18, width - 18);
-  const style = useMemo(
-    () =>
-      ({
-        left,
-        bottom,
-        width,
-        maxHeight,
-        "--tool-popover-arrow-left": `${arrowLeft}px`,
-      }) as CSSProperties,
-    [arrowLeft, bottom, left, maxHeight, width],
-  );
+  const style = useMemo(() => {
+    if (isCompactTouchEditor) {
+      return {
+        left: 0,
+        bottom: 0,
+        width: "100%",
+        maxHeight: "min(76dvh, 620px)",
+      } as CSSProperties;
+    }
+    return {
+      left,
+      bottom,
+      width,
+      maxHeight,
+      "--tool-popover-arrow-left": `${arrowLeft}px`,
+    } as CSSProperties;
+  }, [arrowLeft, bottom, isCompactTouchEditor, left, maxHeight, width]);
 
   useEffect(() => {
     const handleClick = (event: MouseEvent) => {
@@ -121,8 +129,9 @@ export function ToolPopover({
         ref={panelRef}
         className="tool-popover"
         data-panel={panel}
+        data-presentation={isCompactTouchEditor ? "sheet" : "popover"}
         role="dialog"
-        aria-modal="false"
+        aria-modal={isCompactTouchEditor}
         aria-labelledby={titleId}
         aria-describedby={description ? contentId : undefined}
         style={style}

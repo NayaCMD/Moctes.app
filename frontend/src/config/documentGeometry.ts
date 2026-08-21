@@ -28,10 +28,10 @@ export interface CalculatedDocumentViewport {
 }
 
 export const MIN_EDITOR_SCALE = 0.78;
-export const MAX_EDITOR_SCALE = 1.35;
-export const MAX_FIT_SCALE = 1;
+export const MAX_EDITOR_SCALE = 1.75;
+export const MAX_FIT_SCALE = 1.75;
 export const MIN_EDITOR_ZOOM = 0.5;
-export const MAX_EDITOR_ZOOM = 1.5;
+export const MAX_EDITOR_ZOOM = 1.75;
 export const EDITOR_ZOOM_STEP = 0.1;
 const PAN_EPSILON = 0.5;
 
@@ -49,11 +49,12 @@ export const EDITOR_LAYOUT = {
 
 export const DOCUMENT_GEOMETRY = {
   notebook: {
-    width: 1074,
-    height: 700,
-    pageWidth: 504,
-    pageHeight: 668,
-    spineWidth: 34,
+    // Keep these values aligned with the v2 book frame in notebook-cover.css.
+    width: 662,
+    height: 534,
+    pageWidth: 312,
+    pageHeight: 430,
+    spineWidth: 18,
   },
   notepad: {
     width: 560,

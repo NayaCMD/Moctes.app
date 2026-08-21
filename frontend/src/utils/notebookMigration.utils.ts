@@ -1,8 +1,5 @@
 import type { Divider, MoctesDocument } from "../types/document.types";
-import type {
-  NotebookCover,
-  NotebookSection,
-} from "../types/notebook.types";
+import type { NotebookCover, NotebookSection } from "../types/notebook.types";
 import { NOTEBOOK_SCHEMA_VERSION } from "../types/notebook.types";
 import type { Page } from "../types/page.types";
 import { buildNotebookSurfaces } from "./notebookSurfaces.utils";
@@ -14,6 +11,8 @@ const DEFAULT_DIVIDER_COLOR = "#d9f4f7";
 const DEFAULT_TAB_COLOR = "#bde4eb";
 const DEFAULT_TEXT_COLOR = "#26324a";
 
+type LegacyNotebookSection = NotebookSection & { pages?: Page[] };
+
 export function createDefaultNotebookCover(
   document?: Pick<MoctesDocument, "coverColor" | "coverBorderColor">,
 ): NotebookCover {
@@ -21,6 +20,8 @@ export function createDefaultNotebookCover(
     color: document?.coverColor ?? "#bde4eb",
     borderColor: document?.coverBorderColor ?? "#8dcbd7",
     cornerRadius: DEFAULT_COVER_RADIUS,
+    material: "linen",
+    textureIntensity: 18,
   };
 }
 
@@ -28,7 +29,6 @@ export function createDefaultNotebookSection(options: {
   documentId?: string;
   title?: string;
   dividerId?: string;
-  pages?: Page[];
   tabPosition?: number;
 } = {}): NotebookSection {
   const title = options.title ?? DEFAULT_SECTION_TITLE;
@@ -43,8 +43,9 @@ export function createDefaultNotebookSection(options: {
       tabColor: DEFAULT_TAB_COLOR,
       textColor: DEFAULT_TEXT_COLOR,
       tabPosition: options.tabPosition ?? 0,
+      material: "smooth",
+      textureIntensity: 12,
     },
-    pages: options.pages ?? [],
   };
 }
 
@@ -52,77 +53,130 @@ function createNotebookId(prefix: string): string {
   return `${prefix}-${crypto.randomUUID()}`;
 }
 
-export function migrateDocumentToSchemaV2(document: MoctesDocument): MoctesDocument {
-  if (
-    document.schemaVersion === NOTEBOOK_SCHEMA_VERSION &&
-    document.cover &&
-    document.sections &&
-    document.activeSurfaceId
-  ) {
-    return document;
-  }
-
+/**
+ * Converts every legacy notebook representation into the canonical V3 model.
+ * Pages live only in document.pages and reference their section through sectionId.
+ */
+export function migrateDocumentToSchemaV3(document: MoctesDocument): MoctesDocument {
   if (document.type !== "notebook") {
     return document;
   }
 
-  const cover = createDefaultNotebookCover(document);
-  const orderedDividers = [...document.dividers].sort((first, second) => first.order - second.order);
-  const sections = orderedDividers.map((divider, index) =>
-    createSectionFromLegacyDivider(divider, index),
-  );
-  const sectionByDividerId = new Map(
-    sections.map((section) => [section.divider.id, section]),
-  );
-  const defaultSection = createDefaultNotebookSection({
-    documentId: document.id,
-    dividerId: `divider-${document.id}-default`,
-    tabPosition: sections.length,
-  });
+  const rawSections = Array.isArray(document.sections)
+    ? (document.sections as LegacyNotebookSection[])
+    : [];
+  const sections = rawSections.length > 0
+    ? rawSections.map((section, index) => toCanonicalSection(section, index))
+    : [...document.dividers]
+        .sort((first, second) => first.order - second.order)
+        .map((divider, index) => createSectionFromLegacyDivider(divider, index));
 
-  const migratedPages = [...document.pages]
-    .sort((first, second) => first.order - second.order)
-    .map((page) => {
-      if (page.dividerId && sectionByDividerId.has(page.dividerId)) {
-        return page;
-      }
-      return { ...page, dividerId: defaultSection.divider.id };
-    });
-
-  for (const page of migratedPages) {
-    const section =
-      page.dividerId ? sectionByDividerId.get(page.dividerId) ?? defaultSection : defaultSection;
-    section.pages.push(page);
+  if (sections.length === 0) {
+    sections.push(createDefaultNotebookSection({
+      documentId: document.id,
+      dividerId: `divider-${document.id}-default`,
+    }));
   }
 
-  const hasDefaultPages = defaultSection.pages.length > 0;
-  const nextSections = hasDefaultPages || sections.length === 0
-    ? [...sections, defaultSection]
-    : sections;
-  const nextDividers = ensureLegacyDividers(document, nextSections);
-  const activeSurfaceId = deriveActiveSurfaceId(
-    {
-      ...document,
-      cover,
-      sections: nextSections,
-      pages: migratedPages,
-      dividers: nextDividers,
-    },
-    document.activePageId,
+  const sectionIds = new Set(sections.map((section) => section.id));
+  const sectionIdByDividerId = new Map(
+    sections.map((section) => [section.divider.id, section.id]),
   );
+  const embeddedSectionByPageId = new Map<string, string>();
+  const embeddedPageById = new Map<string, Page>();
 
-  const migratedDocument: MoctesDocument = {
-    ...document,
-    schemaVersion: NOTEBOOK_SCHEMA_VERSION,
-    cover,
-    binding: document.binding ?? "left",
-    sections: nextSections,
-    activeSurfaceId,
-    pages: migratedPages,
-    dividers: nextDividers,
+  for (const section of rawSections) {
+    for (const page of getLegacySectionPages(section)) {
+      if (!embeddedSectionByPageId.has(page.id)) {
+        embeddedSectionByPageId.set(page.id, section.id);
+      }
+      if (!embeddedPageById.has(page.id)) {
+        embeddedPageById.set(page.id, page);
+      }
+    }
+  }
+
+  const pageById = new Map<string, Page>();
+  for (const page of document.pages) {
+    if (!pageById.has(page.id)) {
+      pageById.set(page.id, page);
+    }
+  }
+  for (const [pageId, page] of embeddedPageById) {
+    if (!pageById.has(pageId)) {
+      pageById.set(pageId, page);
+    }
+  }
+
+  let defaultSection = sections.find(
+    (section) => section.id === `section-${document.id}-default`,
+  );
+  const ensureDefaultSection = (): NotebookSection => {
+    if (defaultSection) {
+      return defaultSection;
+    }
+    defaultSection = createDefaultNotebookSection({
+      documentId: document.id,
+      dividerId: `divider-${document.id}-default`,
+      tabPosition: sections.length,
+    });
+    sections.push(defaultSection);
+    sectionIds.add(defaultSection.id);
+    sectionIdByDividerId.set(defaultSection.divider.id, defaultSection.id);
+    return defaultSection;
   };
 
-  const validation = validateNotebookDocument(migratedDocument);
+  const canonicalPages = [...pageById.values()].map((page) => {
+    const explicitSectionId = page.sectionId && sectionIds.has(page.sectionId)
+      ? page.sectionId
+      : undefined;
+    const embeddedSectionId = embeddedSectionByPageId.get(page.id);
+    const legacySectionId = page.dividerId
+      ? sectionIdByDividerId.get(page.dividerId)
+      : undefined;
+    const sectionId = explicitSectionId
+      ?? (embeddedSectionId && sectionIds.has(embeddedSectionId) ? embeddedSectionId : undefined)
+      ?? legacySectionId
+      ?? ensureDefaultSection().id;
+
+    return {
+      ...page,
+      sectionId,
+      dividerId: undefined,
+    };
+  });
+
+  const pages = orderPagesBySections(sections, canonicalPages);
+  const activePageId = pages.some((page) => page.id === document.activePageId)
+    ? document.activePageId
+    : pages[0]?.id ?? document.activePageId;
+  const dividers = ensureLegacyDividers(document, sections);
+  const migrated: MoctesDocument = {
+    ...document,
+    schemaVersion: NOTEBOOK_SCHEMA_VERSION,
+    cover: document.cover
+      ? {
+          ...document.cover,
+          material: document.cover.material ?? "linen",
+          textureIntensity: Number.isFinite(document.cover.textureIntensity)
+            ? document.cover.textureIntensity
+            : 18,
+        }
+      : createDefaultNotebookCover(document),
+    binding: document.binding ?? "left",
+    sections,
+    pages,
+    dividers,
+    activePageId,
+  };
+  const activeSurfaceId = buildNotebookSurfaces(migrated).some(
+    (surface) => surface.id === migrated.activeSurfaceId,
+  )
+    ? migrated.activeSurfaceId
+    : deriveActiveSurfaceId(migrated, activePageId);
+  const canonical = { ...migrated, activeSurfaceId };
+
+  const validation = validateNotebookDocument(canonical);
   if (!validation.valid) {
     throw new Error(
       `Notebook migration produced an invalid document: ${validation.errors
@@ -131,106 +185,41 @@ export function migrateDocumentToSchemaV2(document: MoctesDocument): MoctesDocum
     );
   }
 
-  return migratedDocument;
+  return canonical;
 }
 
+/** @deprecated Use migrateDocumentToSchemaV3. */
+export const migrateDocumentToSchemaV2 = migrateDocumentToSchemaV3;
+
 export function reconcileNotebookDocument(document: MoctesDocument): MoctesDocument {
-  if (document.type !== "notebook") {
-    return document;
-  }
-
-  const migrated = migrateDocumentToSchemaV2(document);
-  const currentSections = migrated.sections ?? [];
-  const pageContentById = new Map(migrated.pages.map((page) => [page.id, page]));
-  const assignedPageIds = new Set<string>();
-  const defaultDividerId = `divider-${migrated.id}-default`;
-  let order = 1;
-  const nextSections: NotebookSection[] = currentSections.map((section, sectionIndex) => {
-    const divider = {
-      ...section.divider,
-      tabPosition: Number.isFinite(section.divider.tabPosition)
-        ? section.divider.tabPosition
-        : sectionIndex,
-    };
-    const pages = section.pages.flatMap((sectionPage) => {
-      if (assignedPageIds.has(sectionPage.id)) {
-        return [];
-      }
-      const contentPage = pageContentById.get(sectionPage.id) ?? sectionPage;
-      assignedPageIds.add(contentPage.id);
-      return [{ ...contentPage, dividerId: divider.id, order: order++ }];
-    });
-
-    return {
-      ...section,
-      divider,
-      pages,
-    };
-  });
-
-  const orphanPages = migrated.pages.filter((page) => !assignedPageIds.has(page.id));
-  if (orphanPages.length > 0 || nextSections.length === 0) {
-    const existingDefaultIndex = nextSections.findIndex(
-      (section) => section.divider.id === defaultDividerId,
-    );
-    const defaultSection =
-      existingDefaultIndex >= 0
-        ? nextSections[existingDefaultIndex]
-        : createDefaultNotebookSection({
-            documentId: migrated.id,
-            dividerId: defaultDividerId,
-            tabPosition: nextSections.length,
-          });
-    const defaultPages = orphanPages.map((page) => ({
-      ...page,
-      dividerId: defaultSection.divider.id,
-      order: order++,
-    }));
-    const nextDefaultSection = {
-      ...defaultSection,
-      pages: [...defaultSection.pages, ...defaultPages],
-    };
-
-    if (existingDefaultIndex >= 0) {
-      nextSections[existingDefaultIndex] = nextDefaultSection;
-    } else {
-      nextSections.push(nextDefaultSection);
-    }
-  }
-
-  const nextPages = nextSections.flatMap((section) => section.pages);
-  const activePageId = nextPages.some((page) => page.id === migrated.activePageId)
-    ? migrated.activePageId
-    : nextPages[0]?.id ?? migrated.activePageId;
-
-  const nextDocument: MoctesDocument = {
-    ...migrated,
-    pages: nextPages,
-    sections: nextSections,
-    activePageId,
-  };
-  const nextDividers = ensureLegacyDividers(nextDocument, nextDocument.sections ?? []);
-  const withDividers = { ...nextDocument, dividers: nextDividers };
-  const activeSurfaceId = buildNotebookSurfaces(withDividers).some(
-    (surface) => surface.id === withDividers.activeSurfaceId,
-  )
-    ? withDividers.activeSurfaceId
-    : deriveActiveSurfaceId(withDividers, withDividers.activePageId);
-
-  const syncedDocument = { ...withDividers, activeSurfaceId };
-  const validation = validateNotebookDocument(syncedDocument);
-  if (!validation.valid) {
-    throw new Error(
-      `Notebook sync produced an invalid document: ${validation.errors
-        .map((error) => error.code)
-        .join(", ")}`,
-    );
-  }
-
-  return syncedDocument;
+  return migrateDocumentToSchemaV3(document);
 }
 
 export const syncNotebookSectionsWithPages = reconcileNotebookDocument;
+
+function toCanonicalSection(
+  section: LegacyNotebookSection,
+  index: number,
+): NotebookSection {
+  return {
+    id: section.id,
+    title: section.title,
+    divider: {
+      ...section.divider,
+      tabPosition: Number.isFinite(section.divider.tabPosition)
+        ? section.divider.tabPosition
+        : index,
+      material: section.divider.material ?? "smooth",
+      textureIntensity: Number.isFinite(section.divider.textureIntensity)
+        ? section.divider.textureIntensity
+        : 12,
+    },
+  };
+}
+
+function getLegacySectionPages(section: LegacyNotebookSection): Page[] {
+  return Array.isArray(section.pages) ? section.pages : [];
+}
 
 function createSectionFromLegacyDivider(divider: Divider, index: number): NotebookSection {
   return {
@@ -242,9 +231,27 @@ function createSectionFromLegacyDivider(divider: Divider, index: number): Notebo
       tabColor: divider.color,
       textColor: DEFAULT_TEXT_COLOR,
       tabPosition: index,
+      material: "smooth",
+      textureIntensity: 12,
     },
-    pages: [],
   };
+}
+
+function orderPagesBySections(
+  sections: NotebookSection[],
+  pages: Page[],
+): Page[] {
+  const sectionOrder = new Map(
+    sections.map((section, index) => [section.id, index]),
+  );
+
+  return [...pages]
+    .sort((first, second) => {
+      const firstSection = sectionOrder.get(first.sectionId ?? "") ?? sections.length;
+      const secondSection = sectionOrder.get(second.sectionId ?? "") ?? sections.length;
+      return firstSection - secondSection || first.order - second.order;
+    })
+    .map((page, index) => ({ ...page, order: index + 1 }));
 }
 
 function ensureLegacyDividers(
@@ -268,5 +275,7 @@ function ensureLegacyDividers(
 
 function deriveActiveSurfaceId(document: MoctesDocument, activePageId: string): string {
   const surfaces = buildNotebookSurfaces(document);
-  return surfaces.find((surface) => surface.id === activePageId)?.id ?? surfaces[0]?.id ?? activePageId;
+  return surfaces.find((surface) => surface.id === activePageId)?.id
+    ?? surfaces[0]?.id
+    ?? activePageId;
 }

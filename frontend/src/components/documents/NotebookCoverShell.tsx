@@ -17,10 +17,15 @@ export function NotebookCoverShell({
       document.coverBorderColor ?? "#8dcbd7",
     "--notebook-spine-color":
       document.spineColor ?? "#bdeff3",
+    "--notebook-cover-texture-opacity": `${document.cover?.textureIntensity ?? 18}%`,
   } as CSSProperties;
 
   return (
-    <div className="notebook-cover-shell" style={style}>
+    <div
+      className="notebook-cover-shell"
+      data-cover-material={document.cover?.material ?? "linen"}
+      style={style}
+    >
       <NotebookSkin />
 
       {children}

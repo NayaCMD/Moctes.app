@@ -20,6 +20,7 @@ export function NotebookFrontCover({
     "--notebook-cover-color": cover.color,
     "--notebook-cover-border-color": cover.borderColor,
     "--notebook-cover-radius": `${cover.cornerRadius}px`,
+    "--notebook-cover-texture-opacity": `${cover.textureIntensity ?? 18}%`,
   } as CSSProperties;
 
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
@@ -34,6 +35,7 @@ export function NotebookFrontCover({
       type="button"
       className="notebook-front-cover"
       data-phase={phase}
+      data-cover-material={cover.material ?? "linen"}
       aria-label="Abrir caderno"
       aria-hidden={phase === "open" ? "true" : undefined}
       disabled={disabled || phase === "open"}

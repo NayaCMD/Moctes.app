@@ -10,12 +10,15 @@ export function DevelopmentSettings() {
   const resetEditorSession = useEditorStore((state) => state.resetEditorSession);
 
   return (
-    <div className="development-settings">
-      <span>Desenvolvimento</span>
-      <button type="button" onClick={() => setConfirmOpen(true)}>
-        <RotateCcw size={14} />
-        Restaurar demo
-      </button>
+    <details className="development-settings">
+      <summary>Opções de desenvolvimento</summary>
+      <div>
+        <p>Ferramentas locais para redefinir o conteúdo de demonstração.</p>
+        <button type="button" onClick={() => setConfirmOpen(true)}>
+          <RotateCcw size={14} aria-hidden="true" />
+          Restaurar demonstração
+        </button>
+      </div>
       <ConfirmationDialog
         open={confirmOpen}
         title="Restaurar demonstração"
@@ -29,6 +32,6 @@ export function DevelopmentSettings() {
           setConfirmOpen(false);
         }}
       />
-    </div>
+    </details>
   );
 }
